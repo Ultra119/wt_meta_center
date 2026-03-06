@@ -47,9 +47,17 @@ def register(app, core, all_types, tf_data) -> None:
         df["Type_Display"] = df["Type"].apply(fmt_type)
         cols = [c for c in _RB_COLS if c in df.columns]
 
+        def _rb_col(c):
+            col = {"name": _RB_NAMES.get(c, c), "id": c}
+            if c == "BR":
+                col["type"] = "numeric"
+                from dash.dash_table.Format import Format, Scheme
+                col["format"] = Format(precision=1, scheme=Scheme.fixed)
+            return col
+
         return dash_table.DataTable(
             data=df[cols].round(2).to_dict("records"),
-            columns=[{"name": _RB_NAMES.get(c, c), "id": c} for c in cols],
+            columns=[_rb_col(c) for c in cols],
             virtualization=True,
             style_table={"overflowX": "auto", "height": "600px", "overflowY": "auto"},
             style_header={

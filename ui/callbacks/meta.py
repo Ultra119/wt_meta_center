@@ -6,6 +6,7 @@ import pandas as pd
 from dash import Input, Output, State, html
 import dash_bootstrap_components as dbc
 from dash import dash_table
+from dash.dash_table.Format import Format, Scheme
 
 from ui.helpers import add_name_display, generate_card, fmt_type
 from ui.callbacks.common import init, get_types, apply_type_filter, build_filters
@@ -90,14 +91,19 @@ def register(app, core, all_nations, all_types, tf_data) -> None:
         for rec in table_records:
             rec["id"] = rec["Name"]
 
+        def _col_def(c):
+            if c in ("Name_Display", "Nation", "Type_Display"):
+                return {"name": _META_COL_NAMES.get(c, c), "id": c, "type": "text"}
+            col = {"name": _META_COL_NAMES.get(c, c), "id": c, "type": "numeric"}
+            if c == "BR":
+                from dash.dash_table.Format import Format, Scheme
+                col["format"] = Format(precision=1, scheme=Scheme.fixed)
+            return col
+
         table = dash_table.DataTable(
             id="meta-table",
             data=table_records,
-            columns=[
-                {"name": _META_COL_NAMES.get(c, c), "id": c,
-                 "type": "numeric" if c not in ("Name_Display", "Nation", "Type_Display") else "text"}
-                for c in cols_avail
-            ],
+            columns=[_col_def(c) for c in cols_avail],
             virtualization=True,
             style_table={"overflowX": "auto", "minWidth": "100%",
                          "height": "600px", "overflowY": "auto"},

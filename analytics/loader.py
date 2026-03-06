@@ -173,40 +173,11 @@ def clean_dataframe(df: pd.DataFrame, vehicle_db) -> pd.DataFrame:
     )
     df["BR"] = raw_br.apply(snap_to_wt_br)
 
-    _dir_cat_raw = (
-        df["_dir_category"].copy()
-        if "_dir_category" in df.columns
-        else pd.Series("", index=df.index)
-    )
-
-    _FOLDER_KW_TO_CAT = [
-        ("ground",     "Ground"),     ("tank",       "Ground"),
-        ("nazemka",    "Ground"),     ("armored",    "Ground"),
-        ("spaa",       "Ground"),
-        ("aviation",   "Aviation"),   ("air",        "Aviation"),
-        ("plane",      "Aviation"),   ("heli",       "Aviation"),
-        ("fighter",    "Aviation"),   ("bomber",     "Aviation"),
-        ("aviacia",    "Aviation"),
-        ("large",      "LargeFleet"), ("cruiser",    "LargeFleet"),
-        ("destroyer",  "LargeFleet"), ("battleship", "LargeFleet"),
-        ("naval",      "LargeFleet"), ("fleet",      "LargeFleet"),
-        ("small",      "SmallFleet"), ("boat",       "SmallFleet"),
-        ("barge",      "SmallFleet"), ("frigate",    "SmallFleet"),
-    ]
-
-    def _folder_to_cat(folder: str) -> str:
-        low = folder.lower()
-        for kw, cat in _FOLDER_KW_TO_CAT:
-            if kw in low:
-                return cat
-        return ""
-
-    _dir_cat_mapped = _dir_cat_raw.apply(_folder_to_cat)
-
     df.drop(columns=["_dir_category"], errors="ignore", inplace=True)
 
     if vehicle_db is not None and vehicle_db.loaded:
         df = vehicle_db.enrich_dataframe(df)
+        df = df.copy()
         matched = int((df.get("vdb_match_score", 0) > 0).sum())
         log_debug(
             f"[VehicleDB] vdb_ матч завершён. "
@@ -219,23 +190,10 @@ def clean_dataframe(df: pd.DataFrame, vehicle_db) -> pd.DataFrame:
             )
             vdb_vt = df["vdb_vehicle_type"].astype(str).str.strip()
             valid  = good_match & vdb_vt.isin(["", "nan"]).eq(False)
-            new_cat = vdb_vt.map(VEHICLE_TYPE_CATEGORY).fillna("Uncategorized")
-
-            anchor_cat = _dir_cat_mapped.where(
-                _dir_cat_mapped != "",
-                df["Category"],
-            )
-
-            cat_ok = (
-                anchor_cat.eq("Uncategorized")
-                | (anchor_cat == new_cat)
-            )
-            valid = valid & cat_ok
-
             df.loc[valid, "Type"] = df.loc[valid, "vdb_vehicle_type"]
             log_debug(
                 f"[VehicleDB] Type уточнён для {int(valid.sum())} строк "
-                f"из {len(df)} (через vdb_vehicle_type, без смены категории)"
+                f"из {len(df)} (через vdb_vehicle_type)"
             )
 
     def _derive_class(row) -> str:

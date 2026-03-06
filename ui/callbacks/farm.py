@@ -91,15 +91,22 @@ def register(app, core, all_types, tf_data) -> None:
                     {"if": {"filter_query": '{Роль} = "💰 Топ-фармер"'}, "color": "#fbbf24"},
                 ]
 
-            return dash_table.DataTable(
-                data=df_in[cols].round(2).to_dict("records"),
-                columns=[
-                    {"name": {"Nation": "Нация", "BR": "БР", "Сыграно игр": "Бои",
+            _farm_col_names = {"Nation": "Нация", "BR": "БР", "Сыграно игр": "Бои",
                                "WR": "WR%", "KD": "K/D", "FARM_SCORE": "Farm",
                                "Техника": "Техника", "Роль": "Роль",
-                               _sl_col: _sl_lbl}.get(c, c), "id": c}
-                    for c in cols
-                ],
+                               _sl_col: _sl_lbl}
+
+            def _farm_col(c):
+                from dash.dash_table.Format import Format, Scheme
+                col = {"name": _farm_col_names.get(c, c), "id": c}
+                if c == "BR":
+                    col["type"] = "numeric"
+                    col["format"] = Format(precision=1, scheme=Scheme.fixed)
+                return col
+
+            return dash_table.DataTable(
+                data=df_in[cols].round(2).to_dict("records"),
+                columns=[_farm_col(c) for c in cols],
                 style_table={"overflowX": "auto"},
                 style_header={
                     "backgroundColor": "#1e293b", "color": "#a7f3d0",
