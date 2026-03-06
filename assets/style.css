@@ -246,8 +246,8 @@ input:focus, .form-control:focus {
 
 /* ── DataTable ─────────────────────────────────────────────────── */
 .dash-table-container { font-family: 'JetBrains Mono', monospace; }
-.dash-header { background: var(--bg-surface) !important; color: var(--accent-green2) !important; font-size: 0.7rem !important; letter-spacing: 0.1em !important; text-transform: uppercase !important; border-bottom: 1px solid var(--border) !important; }
-.dash-cell   { background: var(--bg-dark) !important; color: var(--text-primary) !important; border-bottom: 1px solid var(--border) !important; font-size: 0.78rem !important; }
+.dash-header { background: var(--bg-surface) !important; color: var(--accent-green2); font-size: 0.7rem !important; letter-spacing: 0.1em !important; text-transform: uppercase !important; border-bottom: 1px solid var(--border) !important; }
+.dash-cell   { background: var(--bg-dark) !important; color: var(--text-primary); border-bottom: 1px solid var(--border) !important; font-size: 0.78rem; }
 .dash-cell:hover { background: var(--bg-surface) !important; }
 .dash-spreadsheet-container .dash-spreadsheet-inner th { background: var(--bg-surface) !important; }
 .row-selected td { background: rgba(16,185,129,0.12) !important; }
