@@ -127,8 +127,6 @@ def register(app, core, all_nations, all_types, tf_data) -> None:
             ],
             sort_action="native",
             sort_by=[{"column_id": "META_SCORE", "direction": "desc"}],
-            filter_action="native",
-            filter_options={"case": "insensitive"},
             fixed_rows={"headers": True},
             row_selectable="single",
             selected_rows=[],

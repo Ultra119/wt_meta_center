@@ -68,8 +68,6 @@ def register(app, core, all_types, tf_data) -> None:
             ],
             sort_action="native",
             sort_by=[{"column_id": "Сыграно игр", "direction": "asc"}],
-            filter_action="native",
-            filter_options={"case": "insensitive"},
             fixed_rows={"headers": True},
             page_size=100,
         )

@@ -100,8 +100,6 @@ def dark_table(
         fixed_rows={"headers": True},
         sort_action="native",
         sort_by=sort_by or [],
-        filter_action="native",
-        filter_options={"case": "insensitive"},
         page_size=page_size,
         style_as_list_view=False,
     )
