@@ -2,7 +2,7 @@
 Колбэки сайдбара: предупреждения, поиск техники, карточка.
 """
 import json
-from dash import Input, Output, State, html
+from dash import Input, Output, State, html, no_update
 import dash_bootstrap_components as dbc
 from dash import dcc
 
@@ -78,14 +78,15 @@ def register(app, core) -> None:
 
     # ── Отображение карточки из сайдбара ──────────────────────────────────
     @app.callback(
-        Output("sb-card-display", "children"),
+        Output("sb-card-display",        "children"),
+        Output("store-selected-vehicle", "data",     allow_duplicate=True),
         Input("sb-show-card", "n_clicks"),
         State("sb-pick", "value"),
         prevent_initial_call=True,
     )
     def show_card(n, pick_val):
         if not pick_val:
-            return ""
+            return "", no_update
 
         parts  = pick_val.split("||", 1)
         name   = parts[0]
@@ -102,10 +103,16 @@ def register(app, core) -> None:
             row = sub.iloc[0].to_dict() if not sub.empty else None
 
         if row is None:
-            return dbc.Alert("Техника не найдена.", color="warning",
-                             style={"fontSize": "0.8rem"})
+            return (
+                dbc.Alert("Техника не найдена.", color="warning",
+                          style={"fontSize": "0.8rem"}),
+                no_update,
+            )
 
-        return html.Div([
-            html.Hr(),
-            generate_card(row),
-        ])
+        import json as _json
+        return (
+            html.Div([html.Hr(), generate_card(row)]),
+            _json.dumps({k: (v if not hasattr(v, "item") else v.item())
+                         for k, v in row.items()
+                         if not isinstance(v, (list, dict))}),
+        )

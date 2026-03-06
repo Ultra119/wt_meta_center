@@ -10,7 +10,7 @@ from analytics.core import AnalyticsCore
 from analytics.constants import WT_BR_STEPS
 from ui.type_filter import build_type_filter_data
 from ui import layout
-from ui.callbacks import meta, redbook, brackets, farm, sidebar
+from ui.callbacks import meta, redbook, brackets, farm, sidebar, history
 
 # ── Core (singleton) ──────────────────────────────────────────────────────────
 core = AnalyticsCore()
@@ -55,6 +55,7 @@ redbook.register(app, core, all_types, tf_data)
 brackets.register(app, core, all_types, tf_data)
 farm.register(app, core, all_types, tf_data)
 sidebar.register(app, core)
+history.register(app, core)
 
 if __name__ == "__main__":
     app.run(debug=False, host="0.0.0.0", port=8050)

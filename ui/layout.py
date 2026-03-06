@@ -280,6 +280,7 @@ def build(all_nations: list, all_types: list, tf_data: TypeFilterData) -> html.D
         dcc.Store(id="store-meta-df"),
         dcc.Store(id="store-meta-filters"),
         dcc.Store(id="store-selected-vehicle"),
+        dcc.Store(id="store-history", data=[]),
 
         # Модальное окно карточки
         vehicle_modal,
@@ -289,6 +290,9 @@ def build(all_nations: list, all_types: list, tf_data: TypeFilterData) -> html.D
             html.Span("🛡️", style={"fontSize": "1.5rem"}),
             html.H3("WT META CENTER"),
             html.Span("Dash Edition", className="topbar-badge"),
+            html.Div(style={"flex": "1"}),          # spacer — pushes history to the right
+            html.Div(id="history-widget",
+                     style={"marginRight": "12px", "display": "flex", "alignItems": "center"}),
         ]),
 
         # Two-column layout: sidebar + content
