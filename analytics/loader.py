@@ -183,6 +183,18 @@ def clean_dataframe(df: pd.DataFrame, vehicle_db) -> pd.DataFrame:
             f"Сопоставлено: {matched}/{len(df)}"
         )
 
+        if "vdb_vehicle_type" in df.columns:
+            good_match = (
+                df.get("vdb_match_score", pd.Series(0.0, index=df.index)) > 0
+            )
+            vdb_vt = df["vdb_vehicle_type"].astype(str).str.strip()
+            valid  = good_match & vdb_vt.isin(["", "nan"]).eq(False)
+            df.loc[valid, "Type"] = df.loc[valid, "vdb_vehicle_type"]
+            log_debug(
+                f"[VehicleDB] Type уточнён для {int(valid.sum())} строк "
+                f"из {len(df)} (через vdb_vehicle_type)"
+            )
+
     def _derive_class(row) -> str:
         if int(row.get("vdb_is_pack",          0) or 0): return "Pack"
         if int(row.get("vdb_on_marketplace",   0) or 0): return "Marketplace"

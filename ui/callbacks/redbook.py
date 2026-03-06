@@ -5,13 +5,13 @@ from dash import Input, Output
 import dash_bootstrap_components as dbc
 from dash import dash_table
 
-from ui.helpers import add_name_display
+from ui.helpers import add_name_display, fmt_type
 from ui.callbacks.common import init, get_types, apply_type_filter, build_filters
 
-_RB_COLS = ["Name_Display", "Nation", "BR", "Type", "Сыграно игр", "WR", "KD"]
+_RB_COLS = ["Name_Display", "Nation", "BR", "Type_Display", "Сыграно игр", "WR", "KD"]
 _RB_NAMES = {
     "Name_Display": "Техника", "Nation": "Нация", "BR": "БР",
-    "Type": "Тип", "Сыграно игр": "Бои", "WR": "WR%", "KD": "K/D",
+    "Type_Display": "Тип", "Сыграно игр": "Бои", "WR": "WR%", "KD": "K/D",
 }
 
 
@@ -44,6 +44,7 @@ def register(app, core, all_types, tf_data) -> None:
               .sort_values("Сыграно игр", ascending=True)
               .head(100))
         df = add_name_display(df)
+        df["Type_Display"] = df["Type"].apply(fmt_type)
         cols = [c for c in _RB_COLS if c in df.columns]
 
         return dash_table.DataTable(

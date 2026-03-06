@@ -1,5 +1,5 @@
 """
-Общие утилиты UI: форматирование, фабрики таблиц, генерация карточки техники.
+Общие утилиты UI: форматирование, фабрики таблиц, генерация HTML карточки.
 """
 import math
 import pandas as pd
@@ -13,11 +13,11 @@ BR_MAX = float(max(WT_BR_STEPS))
 
 # ── Prefixes ──────────────────────────────────────────────────────────────────
 CLASS_PREFIX: dict[str, str] = {
-    "Premium":     "★ ",
-    "Pack":        "📦 ",
-    "Squadron":    "✦ ",
+    "Premium":    "★ ",
+    "Pack":       "📦 ",
+    "Squadron":   "✦ ",
     "Marketplace": "🏪 ",
-    "Standard":    "",
+    "Standard":   "",
 }
 
 # ── Formatting ────────────────────────────────────────────────────────────────
@@ -159,7 +159,47 @@ def pivot_table(pivot: pd.DataFrame) -> html.Div | dash_table.DataTable:
     )
 
 
-# ── Vehicle Card — Dash Components ────────────────────────────────────────────
+# ── Vehicle Card HTML ─────────────────────────────────────────────────────────
+# ── Type display ─────────────────────────────────────────────────────────────
+# Ключи: snake_case типы из vehicle_type + категории-фолбэки (имя папки)
+TYPE_DISPLAY: dict[str, str] = {
+    # Наземка
+    "medium_tank":        "Средний танк",
+    "light_tank":         "Лёгкий танк",
+    "heavy_tank":         "Тяжёлый танк",
+    "tank_destroyer":     "Противотанковая САУ",
+    "spaa":               "ЗСУ",
+    # Авиация
+    "fighter":            "Истребитель",
+    "bomber":             "Бомбардировщик",
+    "assault":            "Штурмовик",
+    "attack_helicopter":  "Ударный вертолёт",
+    "utility_helicopter": "Вертолёт",
+    # Большой флот
+    "destroyer":          "Эсминец",
+    "battleship":         "Линкор",
+    "light_cruiser":      "Лёгкий крейсер",
+    "heavy_cruiser":      "Тяжёлый крейсер",
+    "battlecruiser":      "Линейный крейсер",
+    # Малый флот
+    "boat":               "Катер",
+    "heavy_boat":         "Тяжёлый катер",
+    "frigate":            "Фрегат",
+    "barge":              "Баржа",
+    # Фолбэки (имя папки, когда vehicle_type пустой)
+    "Ground":             "Наземка",
+    "Aviation":           "Авиация",
+    "LargeFleet":         "Большой флот",
+    "SmallFleet":         "Малый флот",
+    "Uncategorized":      "—",
+}
+
+
+def fmt_type(raw_type: str) -> str:
+    """Возвращает читаемое русское название типа техники."""
+    return TYPE_DISPLAY.get(str(raw_type), str(raw_type))
+
+
 _NATION_FLAG: dict = {
     "usa": "🇺🇸", "germany": "🇩🇪", "ussr": "🇷🇺", "britain": "🇬🇧",
     "japan": "🇯🇵", "italy": "🇮🇹", "france": "🇫🇷", "sweden": "🇸🇪",
@@ -178,7 +218,6 @@ _TYPE_ICON: dict = {
 
 
 def _g(row: dict, col, default=None):
-    """Безопасное извлечение значения из строки с заменой NaN/пустых строк."""
     v = row.get(col, default)
     if v is None:
         return default
@@ -189,87 +228,51 @@ def _g(row: dict, col, default=None):
     return v
 
 
+def _armor_bar(label: str, value: float) -> str:
+    pct = min(100.0, (value / 500.0) * 100.0) if value > 0 else 0.0
+    if value >= 300:   color = "#ef4444"
+    elif value >= 150: color = "#f97316"
+    elif value >= 60:  color = "#fbbf24"
+    elif value > 0:    color = "#34d399"
+    else:              color = "#1e293b"
+    num = "—" if value == 0 else f"{value:.0f} мм"
+    return (
+        f'<div class="vc-armor-bar">'
+        f'<span class="vc-armor-label">{label}</span>'
+        f'<div class="vc-armor-track"><div class="vc-armor-fill" style="width:{pct:.0f}%;background:{color}"></div></div>'
+        f'<span class="vc-armor-num">{num}</span>'
+        f'</div>'
+    )
+
+
+def _ammo_chip(atype: str) -> str:
+    t = str(atype).lower()
+    if "aphe" in t:                           cls, lbl = "chip-aphe",  "APHE"
+    elif "heat" in t or "hesh" in t:          cls, lbl = "chip-heat",  "HEAT/HESH"
+    elif "atgm" in t or "guided" in t:        cls, lbl = "chip-atgm",  "ATGM"
+    elif "apds" in t or "apfs" in t or "apcr" in t: cls, lbl = "chip-apds", t.upper()[:6]
+    elif "he_frag" in t or t == "he":         cls, lbl = "chip-he",    "HE"
+    elif "smoke" in t:                        cls, lbl = "chip-smoke", "Smoke"
+    else:                                     cls, lbl = "chip-other", t[:8].upper()
+    return f'<span class="vc-ammo-chip {cls}">{lbl}</span>'
+
+
+def _stat_row(label: str, value: str, cls: str = "vc-value") -> str:
+    return (
+        f'<div class="vc-row">'
+        f'<span class="vc-label">{label}</span>'
+        f'<span class="{cls}">{value}</span>'
+        f'</div>'
+    )
+
+
 def _score_col(v: float) -> str:
-    if v >= 70:
-        return "#34d399"
-    if v >= 45:
-        return "#fbbf24"
+    if v >= 70: return "#34d399"
+    if v >= 45: return "#fbbf24"
     return "#f87171"
 
 
-# ── Card sub-components ───────────────────────────────────────────────────────
-
-def _stat_row(label: str, value: str, cls: str = "vc-value") -> html.Div:
-    return html.Div(className="vc-row", children=[
-        html.Span(label, className="vc-label"),
-        html.Span(value, className=cls),
-    ])
-
-
-def _armor_bar(label: str, value: float) -> html.Div:
-    pct = min(100.0, (value / 500.0) * 100.0) if value > 0 else 0.0
-    if value >= 300:    color = "#ef4444"
-    elif value >= 150:  color = "#f97316"
-    elif value >= 60:   color = "#fbbf24"
-    elif value > 0:     color = "#34d399"
-    else:               color = "#1e293b"
-    num = "—" if value == 0 else f"{value:.0f} мм"
-    return html.Div(className="vc-armor-bar", children=[
-        html.Span(label, className="vc-armor-label"),
-        html.Div(className="vc-armor-track", children=[
-            html.Div(className="vc-armor-fill",
-                     style={"width": f"{pct:.0f}%", "background": color}),
-        ]),
-        html.Span(num, className="vc-armor-num"),
-    ])
-
-
-def _ammo_chip(atype: str) -> html.Span:
-    t = str(atype).lower()
-    if "aphe" in t:
-        cls, lbl = "chip-aphe", "APHE"
-    elif "heat" in t or "hesh" in t:
-        cls, lbl = "chip-heat", "HEAT/HESH"
-    elif "atgm" in t or "guided" in t:
-        cls, lbl = "chip-atgm", "ATGM"
-    elif "apds" in t or "apfs" in t or "apcr" in t:
-        cls, lbl = "chip-apds", t.upper()[:6]
-    elif "he_frag" in t or t == "he":
-        cls, lbl = "chip-he", "HE"
-    elif "smoke" in t:
-        cls, lbl = "chip-smoke", "Smoke"
-    else:
-        cls, lbl = "chip-other", t[:8].upper()
-    return html.Span(lbl, className=f"vc-ammo-chip {cls}")
-
-
-def _score_gauge(value: float, label: str, gradient: str) -> html.Div:
-    color = _score_col(value)
-    return html.Div(style={
-        "display": "inline-flex", "flexDirection": "column",
-        "alignItems": "center", "justifyContent": "center",
-        "width": "66px", "height": "66px", "borderRadius": "50%",
-        "border": f"3px solid {color}",
-        "background": f"radial-gradient(circle,{gradient} 0%,#0f172a 100%)",
-        "boxShadow": f"0 0 14px {color}44", "flexShrink": "0",
-    }, children=[
-        html.Span(f"{value:.0f}", style={
-            "fontFamily": "Rajdhani,sans-serif", "fontSize": "1.3rem",
-            "fontWeight": "700", "color": color, "lineHeight": "1",
-        }),
-        html.Span(label, style={
-            "fontSize": ".5rem", "color": "#6ee7b7" if label == "META" else "#a78bfa",
-            "letterSpacing": ".1em", "textTransform": "uppercase",
-        }),
-    ])
-
-
-# ── Public API ────────────────────────────────────────────────────────────────
-
-def generate_vehicle_card(row: dict) -> html.Div:
-    """Карточка техники в виде дерева Dash-компонентов."""
-
-    # ── Raw values ────────────────────────────────────────────────────────────
+def generate_card_html(row: dict) -> str:
     name    = _g(row, "Name",    "—")
     nation  = str(_g(row, "Nation", "")).lower()
     br      = float(_g(row, "BR",  0))
@@ -318,169 +321,126 @@ def generate_vehicle_card(row: dict) -> html.Div:
     rel_date   = str(_g(row, "vdb_release_date", ""))
     ver        = str(_g(row, "vdb_version", ""))
 
-    _ERA_ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII"]
-    era_str = _ERA_ROMAN[era] if 0 < era < len(_ERA_ROMAN) else (str(era) if era else "—")
+    era_roman = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII"]
+    era_str   = era_roman[era] if 0 < era < len(era_roman) else (str(era) if era else "—")
 
-    wr_cls = "vc-value-green" if wr >= 55 else "vc-value-yellow" if wr >= 48 else "vc-value-red"
+    meta_col = _score_col(meta)
+    farm_col = _score_col(farm)
+    wr_cls   = "vc-value-green" if wr >= 55 else "vc-value-yellow" if wr >= 48 else "vc-value-red"
 
-    # ── Header ────────────────────────────────────────────────────────────────
-    badges = []
-    if is_prem:  badges.append(html.Span("★ Premium",    className="vc-badge vc-badge-prem"))
-    if is_pack:  badges.append(html.Span("📦 Pack",       className="vc-badge vc-badge-pack"))
-    if is_squad: badges.append(html.Span("✦ Squadron",   className="vc-badge vc-badge-squad"))
-    if on_mkt:   badges.append(html.Span("🏪 Marketplace", className="vc-badge vc-badge-mkt"))
+    badges = ""
+    if is_prem:  badges += '<span class="vc-badge vc-badge-prem">★ Premium</span>'
+    if is_pack:  badges += '<span class="vc-badge vc-badge-pack">📦 Pack</span>'
+    if is_squad: badges += '<span class="vc-badge vc-badge-squad">✦ Squadron</span>'
+    if on_mkt:   badges += '<span class="vc-badge vc-badge-mkt">🏪 Marketplace</span>'
 
-    header = html.Div(className="vc-header", children=[
-        html.Div(f"{flag} {name}", className="vc-title"),
-        html.Div(className="vc-subtitle", children=[
-            f"{type_icon} {vtype.replace('_', ' ').title()}",
-            html.Span(" · ", style={"opacity": ".5"}),
-            nation.title(),
-            html.Span(" · ", style={"opacity": ".5"}),
-            f"БР {br:.1f}",
-            html.Span(" · ", style={"opacity": ".5"}),
-            f"Ранг {era_str}",
-        ]),
-        html.Div(badges, style={"marginTop": "8px"}),
-    ])
-
-    # ── Score gauges + quick stats ────────────────────────────────────────────
-    gauges_row = html.Div(style={
-        "display": "flex", "alignItems": "center",
-        "gap": "20px", "marginBottom": "12px",
-    }, children=[
-        _score_gauge(meta, "META", "#064e3b"),
-        _score_gauge(farm, "FARM", "#1c1917"),
-        html.Div(style={"display": "flex", "flexDirection": "column", "gap": "3px", "fontSize": ".78rem"},
-                 children=[
-                     _stat_row("WinRate", f"{wr:.1f}%", wr_cls),
-                     _stat_row("K/D",     f"{kd:.2f}"),
-                     _stat_row("Боёв",    fmt_num(battles)),
-                 ]),
-    ])
-
-    # ── Economy ───────────────────────────────────────────────────────────────
     rep_cls    = "vc-value-red" if rep_rb > 5000 else "vc-value-yellow" if rep_rb > 2000 else "vc-value-green"
     sl_mul_cls = "vc-value-green" if sl_mul_rb >= 1.5 else "vc-value-yellow" if sl_mul_rb >= 1.0 else "vc-value-red"
     net_sl     = sl_pg - rep_rb if sl_pg > 0 and rep_rb > 0 else 0
     net_cls    = "vc-value-green" if net_sl > 0 else "vc-value-red"
 
-    econ_rows = []
-    if sl_pg > 0:     econ_rows.append(_stat_row("SL / игру",        fmt_num(sl_pg),              "vc-value-yellow"))
-    if rp_pg > 0:     econ_rows.append(_stat_row("RP / игру",        fmt_num(rp_pg),              "vc-value-blue"))
-    if net_sl != 0:   econ_rows.append(_stat_row("Чистый SL / игру", fmt_num(net_sl, signed=True), net_cls))
-    if rep_rb > 0:    econ_rows.append(_stat_row("Ремонт RB",        fmt_num(rep_rb, " SL"),      rep_cls))
-    if rep_fu > 0:    econ_rows.append(_stat_row("Полный ремонт",    fmt_num(rep_fu, " SL"),      "vc-value"))
-    if sl_mul_rb > 0: econ_rows.append(_stat_row("SL-множитель RB",  f"×{sl_mul_rb:.2f}",         sl_mul_cls))
-    if sl_mul_ab > 0: econ_rows.append(_stat_row("SL-множитель AB",  f"×{sl_mul_ab:.2f}",         "vc-value"))
-    if req_exp > 0:   econ_rows.append(_stat_row("Нужно RP",         fmt_num(req_exp),            "vc-value-blue"))
-    if val_sl > 0:    econ_rows.append(_stat_row("Стоимость",        fmt_num(val_sl, " SL"),      "vc-value"))
+    econ = ""
+    if sl_pg > 0:     econ += _stat_row("SL / игру",        fmt_num(sl_pg),              "vc-value-yellow")
+    if rp_pg > 0:     econ += _stat_row("RP / игру",        fmt_num(rp_pg),              "vc-value-blue")
+    if net_sl != 0:   econ += _stat_row("Чистый SL / игру", fmt_num(net_sl, signed=True), net_cls)
+    if rep_rb > 0:    econ += _stat_row("Ремонт RB",        fmt_num(rep_rb, " SL"),      rep_cls)
+    if rep_fu > 0:    econ += _stat_row("Полный ремонт",    fmt_num(rep_fu, " SL"),      "vc-value")
+    if sl_mul_rb > 0: econ += _stat_row("SL-множитель RB",  f"×{sl_mul_rb:.2f}",         sl_mul_cls)
+    if sl_mul_ab > 0: econ += _stat_row("SL-множитель AB",  f"×{sl_mul_ab:.2f}",         "vc-value")
+    if req_exp > 0:   econ += _stat_row("Нужно RP",         fmt_num(req_exp),            "vc-value-blue")
+    if val_sl > 0:    econ += _stat_row("Стоимость",        fmt_num(val_sl, " SL"),      "vc-value")
+    econ_section = f'<div class="vc-section-title">💰 Экономика</div>{econ}' if econ else ""
 
-    econ_section = (
-        [html.Div("💰 Экономика", className="vc-section-title")] + econ_rows
-        if econ_rows else []
-    )
+    armor_html = ""
+    if any([hull_f, hull_s, hull_r, turt_f, turt_s, turt_r]):
+        armor_html = (
+            '<div class="vc-section-title">🛡️ Бронирование</div>'
+            + _armor_bar("Корпус: перед", hull_f)
+            + _armor_bar("Корпус: борт",  hull_s)
+            + _armor_bar("Корпус: корма", hull_r)
+            + _armor_bar("Башня: перед",  turt_f)
+            + _armor_bar("Башня: борт",   turt_s)
+            + _armor_bar("Башня: корма",  turt_r)
+        )
 
-    # ── Armour ────────────────────────────────────────────────────────────────
-    armor_values = [hull_f, hull_s, hull_r, turt_f, turt_s, turt_r]
-    armor_section = []
-    if any(armor_values):
-        armor_section = [
-            html.Div("🛡️ Бронирование", className="vc-section-title"),
-            _armor_bar("Корпус: перед", hull_f),
-            _armor_bar("Корпус: борт",  hull_s),
-            _armor_bar("Корпус: корма", hull_r),
-            _armor_bar("Башня: перед",  turt_f),
-            _armor_bar("Башня: борт",   turt_s),
-            _armor_bar("Башня: корма",  turt_r),
-        ]
-
-    # ── Weapons ───────────────────────────────────────────────────────────────
-    weapon_rows = []
-    if caliber:  weapon_rows.append(_stat_row("Калибр",        f"{caliber:.0f} мм"))
-    if gun_spd:  weapon_rows.append(_stat_row("Нач. скорость", f"{gun_spd:.0f} м/с"))
-
+    weapon_rows = ""
+    if caliber:  weapon_rows += _stat_row("Калибр",        f"{caliber:.0f} мм")
+    if gun_spd:  weapon_rows += _stat_row("Нач. скорость", f"{gun_spd:.0f} м/с")
     perks = []
     if has_atgm:  perks.append("🚀 ATGM")
     if has_therm: perks.append("🌡️ Термооптика")
     if has_heat:  perks.append("🔥 HEAT/HESH")
     if has_aphe:  perks.append("💥 APHE")
+    ammo_chips = ("".join(_ammo_chip(t) for t in ammo_types[:12])
+                  if ammo_types else '<span style="color:#475569;font-size:.7rem">нет данных</span>')
+    perks_html = (f'<div style="margin-top:6px;font-size:.72rem;color:#a7f3d0">{" &nbsp;|&nbsp; ".join(perks)}</div>'
+                  if perks else "")
+    weapon_section = (
+        f'<div class="vc-section-title">🔫 Вооружение</div>'
+        f'{weapon_rows}<div style="margin-top:6px">{ammo_chips}</div>{perks_html}'
+    ) if (weapon_rows or ammo_types or perks) else ""
 
-    ammo_chips = (
-        [_ammo_chip(t) for t in ammo_types[:12]]
-        if ammo_types
-        else [html.Span("нет данных", style={"color": "#475569", "fontSize": ".7rem"})]
-    )
-
-    weapon_section = []
-    if weapon_rows or ammo_types or perks:
-        weapon_section = [
-            html.Div("🔫 Вооружение", className="vc-section-title"),
-            *weapon_rows,
-            html.Div(ammo_chips, style={"marginTop": "6px"}),
-        ]
-        if perks:
-            weapon_section.append(
-                html.Div(
-                    " | ".join(perks),
-                    style={"marginTop": "6px", "fontSize": ".72rem", "color": "#a7f3d0"},
-                )
-            )
-
-    # ── Mobility ──────────────────────────────────────────────────────────────
-    mobility_section = []
+    mobility_html = ""
     if spd_rb > 0 or hp_rb > 0:
         pw = (hp_rb / (mass / 1000)) if mass > 0 and hp_rb > 0 else 0
         pw_cls = "vc-value-green" if pw >= 20 else "vc-value-yellow" if pw >= 12 else "vc-value-red"
+        parts = []
+        if spd_rb: parts.append(f"Скорость {spd_rb} км/ч")
+        if pw:     parts.append(f"Уд. мощность <span class='{pw_cls}'>{pw:.1f} л.с./т</span>")
+        if crew:   parts.append(f"Экипаж {crew} чел.")
+        mobility_html = (
+            '<div class="vc-section-title">⚡ Подвижность</div>'
+            '<div style="font-size:.78rem;color:#e2e8f0;display:flex;gap:20px;flex-wrap:wrap">'
+            + "".join(f"<span>{p}</span>" for p in parts) + "</div>"
+        )
 
-        mob_parts = []
-        if spd_rb:
-            mob_parts.append(html.Span(f"Скорость {spd_rb} км/ч"))
-        if pw:
-            mob_parts.append(html.Span([
-                "Уд. мощность ",
-                html.Span(f"{pw:.1f} л.с./т", className=pw_cls),
-            ]))
-        if crew:
-            mob_parts.append(html.Span(f"Экипаж {crew} чел."))
-
-        mobility_section = [
-            html.Div("⚡ Подвижность", className="vc-section-title"),
-            html.Div(mob_parts, style={
-                "fontSize": ".78rem", "color": "#e2e8f0",
-                "display": "flex", "gap": "20px", "flexWrap": "wrap",
-            }),
-        ]
-
-    # ── Footer ────────────────────────────────────────────────────────────────
     footer_match = f"✅ match {match_sc:.0%}" if match_sc > 0 else "⚠️ vdb нет данных"
+    footer_extra = ""
+    if rel_date: footer_extra += f"Добавлено: {rel_date}"
+    if ver:      footer_extra += f"&nbsp;|&nbsp;{ver}"
 
-    footer_extra_parts: list = []
-    if rel_date:
-        footer_extra_parts.append(f"Добавлено: {rel_date}")
-    if ver:
-        footer_extra_parts.append(ver)
-    footer_extra = " | ".join(footer_extra_parts)
-
-    footer = html.Div(className="vc-footer", children=[
-        html.Span(identifier or "—"),
-        html.Span(footer_extra),
-        html.Span(footer_match),
-    ])
-
-    # ── Assemble ──────────────────────────────────────────────────────────────
-    return html.Div(className="vc-card", children=[
-        header,
-        html.Div(className="vc-body", children=[
-            gauges_row,
-            *econ_section,
-            *armor_section,
-            *weapon_section,
-            *mobility_section,
-        ]),
-        footer,
-    ])
-
-
-# Backward-compatible alias (callers that imported the old name still work)
-generate_card_html = generate_vehicle_card
+    return f"""
+<div class="vc-card">
+  <div class="vc-header">
+    <div class="vc-title">{flag} {name}</div>
+    <div class="vc-subtitle">
+      {type_icon} {vtype.replace("_", " ").title()}
+      &nbsp;·&nbsp; {nation.title()}
+      &nbsp;·&nbsp; БР {br:.1f}
+      &nbsp;·&nbsp; Ранг {era_str}
+    </div>
+    <div style="margin-top:8px">{badges}</div>
+  </div>
+  <div class="vc-body">
+    <div style="display:flex;align-items:center;gap:20px;margin-bottom:12px">
+      <div style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;
+                  width:66px;height:66px;border-radius:50%;border:3px solid {meta_col};
+                  background:radial-gradient(circle,#064e3b 0%,#0f172a 100%);
+                  box-shadow:0 0 14px {meta_col}44;flex-shrink:0">
+        <span style="font-family:Rajdhani,sans-serif;font-size:1.3rem;font-weight:700;color:{meta_col};line-height:1">{meta:.0f}</span>
+        <span style="font-size:.5rem;color:#6ee7b7;letter-spacing:.1em;text-transform:uppercase">META</span>
+      </div>
+      <div style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;
+                  width:66px;height:66px;border-radius:50%;border:3px solid {farm_col};
+                  background:radial-gradient(circle,#1c1917 0%,#0f172a 100%);
+                  box-shadow:0 0 14px {farm_col}44;flex-shrink:0">
+        <span style="font-family:Rajdhani,sans-serif;font-size:1.3rem;font-weight:700;color:{farm_col};line-height:1">{farm:.0f}</span>
+        <span style="font-size:.5rem;color:#a78bfa;letter-spacing:.1em;text-transform:uppercase">FARM</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:3px;font-size:.78rem">
+        {_stat_row("WinRate", f"{wr:.1f}%", wr_cls)}
+        {_stat_row("K/D",     f"{kd:.2f}")}
+        {_stat_row("Боёв",    fmt_num(battles))}
+      </div>
+    </div>
+    {econ_section}
+    {armor_html}
+    {weapon_section}
+    {mobility_html}
+  </div>
+  <div class="vc-footer">
+    <span>{identifier or "—"}</span>
+    <span>{footer_extra}</span>
+    <span>{footer_match}</span>
+  </div>
+</div>"""

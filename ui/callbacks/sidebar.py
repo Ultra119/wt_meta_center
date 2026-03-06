@@ -6,7 +6,7 @@ from dash import Input, Output, State, html
 import dash_bootstrap_components as dbc
 from dash import dcc
 
-from ui.helpers import generate_vehicle_card
+from ui.helpers import generate_card_html
 
 
 def register(app, core) -> None:
