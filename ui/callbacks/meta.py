@@ -7,7 +7,7 @@ from dash import Input, Output, State, html
 import dash_bootstrap_components as dbc
 from dash import dash_table
 
-from ui.helpers import add_name_display, generate_card_html, fmt_type
+from ui.helpers import add_name_display, generate_card, fmt_type
 from ui.callbacks.common import init, get_types, apply_type_filter, build_filters
 
 _META_COLS = [
@@ -28,7 +28,6 @@ _META_COL_NAMES = {
     "Net SL за игру": "Net SL/игру",
 }
 
-# Колонки, которые сохраняем в Store для карточки
 _STORE_KEEP = [
     "Name", "Nation", "BR", "Type", "WR", "KD",
     "META_SCORE", "FARM_SCORE", "Сыграно игр",
@@ -86,6 +85,7 @@ def register(app, core, all_nations, all_types, tf_data) -> None:
             html.I("Кликните строку для карточки", style={"color": "#64748b"}),
         ], style={"fontSize": "0.75rem", "color": "#94a3b8"})
 
+        # Поле "id" в каждой записи = row_id для active_cell
         table_records = df[cols_avail + ["Name"]].round(2).to_dict("records")
         for rec in table_records:
             rec["id"] = rec["Name"]
@@ -112,6 +112,7 @@ def register(app, core, all_nations, all_types, tf_data) -> None:
                 "border": "1px solid #1e293b",
                 "fontFamily": "'JetBrains Mono', monospace",
                 "fontSize": "12px", "padding": "6px 10px",
+                "cursor": "pointer",
             },
             style_cell_conditional=[
                 {"if": {"column_id": "Name_Display"},   "fontWeight": "600", "minWidth": "140px", "maxWidth": "200px", "textAlign": "left", "paddingLeft": "10px"},
@@ -120,7 +121,7 @@ def register(app, core, all_nations, all_types, tf_data) -> None:
                 {"if": {"column_id": "Type_Display"},   "color": "#94a3b8", "fontSize": "11px", "minWidth": "110px", "maxWidth": "140px"},
             ],
             style_data_conditional=[
-                {"if": {"state": "selected"},
+                {"if": {"state": "active"},
                  "backgroundColor": "rgba(16,185,129,0.12)", "border": "1px solid #10b981"},
                 {"if": {"filter_query": "{META_SCORE} >= 70", "column_id": "META_SCORE"}, "color": "#34d399"},
                 {"if": {"filter_query": "{META_SCORE} >= 45 && {META_SCORE} < 70", "column_id": "META_SCORE"}, "color": "#fbbf24"},
@@ -131,12 +132,10 @@ def register(app, core, all_nations, all_types, tf_data) -> None:
             sort_action="native",
             sort_by=[{"column_id": "META_SCORE", "direction": "desc"}],
             fixed_rows={"headers": True},
-            row_selectable="single",
-            selected_rows=[],
+            # row_selectable убран — карточка открывается по клику на ячейку (active_cell)
             page_action="none",
         )
 
-        # Store: только нужные колонки + vdb_*
         vdb_cols = [c for c in df.columns if c.startswith("vdb_")]
         keep     = [c for c in _STORE_KEEP + vdb_cols if c in df.columns]
         store    = df[keep].to_json(orient="records")
@@ -144,25 +143,44 @@ def register(app, core, all_nations, all_types, tf_data) -> None:
         return table, info, store, json.dumps(filters)
 
     @app.callback(
-        Output("meta-card-container",    "children"),
+        Output("vehicle-modal",      "is_open"),
+        Output("vehicle-modal-body", "children"),
         Output("store-selected-vehicle", "data"),
-        Input("meta-table",    "selected_row_ids"),
+        Input("meta-table",    "active_cell"),
+        State("meta-table",    "derived_virtual_data"),
         State("store-meta-df", "data"),
         prevent_initial_call=True,
     )
-    def show_card(sel_ids, store_json):
-        if not sel_ids or not store_json:
-            return "", None
+    def open_modal(active_cell, virtual_data, store_json):
+        if not active_cell or not store_json:
+            return False, None, None
         try:
-            selected_name = sel_ids[0]  # id = Name
+            row_idx  = active_cell["row"]
+            vd       = virtual_data or []
+            if row_idx >= len(vd):
+                return False, None, None
+
+            name = vd[row_idx].get("Name") or vd[row_idx].get("id")
+            if not name:
+                return False, None, None
 
             store_df = pd.DataFrame(json.loads(store_json))
-            match    = store_df[store_df["Name"] == selected_name]
+            match    = store_df[store_df["Name"] == name]
             if match.empty:
-                return "", None
+                return False, None, None
 
-            merged    = match.iloc[0].to_dict()
-            card_html = generate_card_html(merged)
-            return html.Div(dangerouslySetInnerHTML={"__html": card_html}), json.dumps(merged)
+            merged = {**vd[row_idx], **match.iloc[0].to_dict()}
+            card   = generate_card(merged)
+            return True, card, json.dumps(merged)
         except Exception as e:
-            return dbc.Alert(f"Ошибка карточки: {e}", color="danger"), None
+            err = dbc.Alert(f"Ошибка карточки: {e}", color="danger")
+            return True, err, None
+
+    # ── Закрытие модального окна ─────────────────────────────────────────
+    @app.callback(
+        Output("vehicle-modal", "is_open", allow_duplicate=True),
+        Input("vehicle-modal-close", "n_clicks"),
+        prevent_initial_call=True,
+    )
+    def close_modal(_):
+        return False

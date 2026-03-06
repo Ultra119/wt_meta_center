@@ -113,7 +113,6 @@ def _tab_meta(all_nations: list) -> html.Div:
         ], className="panel mb-3"),
         html.Div(id="meta-info", className="caption-text"),
         html.Div(id="meta-table-container"),
-        html.Div(id="meta-card-container", style={"marginTop": "20px"}),
     ], style={"padding": "4px"})
 
 
@@ -240,11 +239,50 @@ def _tab_farm(all_nations: list, tf_data: TypeFilterData) -> html.Div:
 
 # ─────────────────────────────────────────────────────────────────────────────
 def build(all_nations: list, all_types: list, tf_data: TypeFilterData) -> html.Div:
+    # ── Модальное окно карточки техники ───────────────────────────────────
+    vehicle_modal = dbc.Modal(
+        id="vehicle-modal",
+        is_open=False,
+        size="lg",
+        centered=True,
+        scrollable=True,
+        children=[
+            dbc.ModalHeader(
+                dbc.Button(
+                    "✕",
+                    id="vehicle-modal-close",
+                    color="link",
+                    style={
+                        "color": "#94a3b8", "fontSize": "1.2rem",
+                        "padding": "0 4px", "lineHeight": "1",
+                        "marginLeft": "auto",
+                    },
+                ),
+                style={
+                    "backgroundColor": "#0a1628",
+                    "borderBottom": "1px solid #1e3a5f",
+                    "padding": "8px 16px",
+                },
+                close_button=False,
+            ),
+            dbc.ModalBody(
+                id="vehicle-modal-body",
+                style={"backgroundColor": "#0f172a", "padding": "0"},
+            ),
+        ],
+        style={"--bs-modal-bg": "#0f172a"},
+        backdrop=True,
+        keyboard=True,
+    )
+
     return html.Div([
         # Shared stores
         dcc.Store(id="store-meta-df"),
         dcc.Store(id="store-meta-filters"),
         dcc.Store(id="store-selected-vehicle"),
+
+        # Модальное окно карточки
+        vehicle_modal,
 
         # Top bar
         html.Div(id="topbar", children=[
@@ -258,9 +296,9 @@ def build(all_nations: list, all_types: list, tf_data: TypeFilterData) -> html.D
             dbc.Col(_sidebar(all_nations, tf_data), width=3, xl=2, style={"padding": 0}),
             dbc.Col([
                 dbc.Tabs(id="main-tabs", active_tab="tab-meta", children=[
-                    dbc.Tab(_tab_meta(all_nations),       label="🏆 META Рейтинг",      tab_id="tab-meta"),
-                    dbc.Tab(_tab_redbook(all_nations),    label="💀 Красная Книга",      tab_id="tab-redbook"),
-                    dbc.Tab(_tab_brackets(),              label="📊 БР Кронштейны",      tab_id="tab-brackets"),
+                    dbc.Tab(_tab_meta(all_nations),          label="🏆 META Рейтинг",      tab_id="tab-meta"),
+                    dbc.Tab(_tab_redbook(all_nations),       label="💀 Красная Книга",      tab_id="tab-redbook"),
+                    dbc.Tab(_tab_brackets(),                 label="📊 БР Кронштейны",      tab_id="tab-brackets"),
                     dbc.Tab(_tab_farm(all_nations, tf_data), label="⚙️ Конструктор Сетапа", tab_id="tab-farm"),
                 ], style={"marginTop": "6px"}),
             ], width=9, xl=10, style={"padding": "8px 16px"}),

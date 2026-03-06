@@ -6,7 +6,7 @@ from dash import Input, Output, State, html
 import dash_bootstrap_components as dbc
 from dash import dcc
 
-from ui.helpers import generate_card_html
+from ui.helpers import generate_card
 
 
 def register(app, core) -> None:
@@ -107,5 +107,5 @@ def register(app, core) -> None:
 
         return html.Div([
             html.Hr(),
-            generate_vehicle_card(row),
+            generate_card(row),
         ])

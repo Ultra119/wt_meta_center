@@ -1,5 +1,5 @@
 """
-Общие утилиты UI: форматирование, фабрики таблиц, генерация HTML карточки.
+Общие утилиты UI: форматирование, фабрики таблиц, карточка техники на Dash-компонентах.
 """
 import math
 import pandas as pd
@@ -13,15 +13,15 @@ BR_MAX = float(max(WT_BR_STEPS))
 
 # ── Prefixes ──────────────────────────────────────────────────────────────────
 CLASS_PREFIX: dict[str, str] = {
-    "Premium":    "★ ",
-    "Pack":       "📦 ",
-    "Squadron":   "✦ ",
+    "Premium":     "★ ",
+    "Pack":        "📦 ",
+    "Squadron":    "✦ ",
     "Marketplace": "🏪 ",
-    "Standard":   "",
+    "Standard":    "",
 }
 
 # ── Formatting ────────────────────────────────────────────────────────────────
-def fmt_num(n: int, suffix: str = "", signed: bool = False) -> str:
+def fmt_num(n, suffix: str = "", signed: bool = False) -> str:
     try:
         n = int(n)
         s = f"{abs(n):,}".replace(",", "\u202f")
@@ -64,7 +64,7 @@ _CELL_STYLE = {
     "padding": "6px 10px",
 }
 _SEL_STYLE = [
-    {"if": {"state": "selected"},
+    {"if": {"state": "active"},
      "backgroundColor": "rgba(16,185,129,0.12)",
      "border": "1px solid #10b981"},
 ]
@@ -79,7 +79,6 @@ def dark_table(
     selectable: bool = False,
     extra_cond_styles: list | None = None,
     table_id: str | None = None,
-    page_size: int = 100,
     max_height: str = "520px",
     virtualize: bool = True,
 ) -> dash_table.DataTable:
@@ -125,7 +124,7 @@ def pivot_table(pivot: pd.DataFrame) -> html.Div | dash_table.DataTable:
     nation_cols = [c for c in pivot.columns if c != idx_col]
     records = pivot.to_dict("records")
 
-    styles = [{"if": {"state": "selected"}, "backgroundColor": "rgba(16,185,129,0.1)"}]
+    styles = [{"if": {"state": "active"}, "backgroundColor": "rgba(16,185,129,0.1)"}]
     for row_i, row in enumerate(records):
         vals = {c: float(row.get(c, 0) or 0) for c in nation_cols}
         row_max = max(vals.values()) if vals else 0
@@ -148,7 +147,8 @@ def pivot_table(pivot: pd.DataFrame) -> html.Div | dash_table.DataTable:
         data=records,
         columns=[{"name": c, "id": c} for c in pivot.columns],
         virtualization=True,
-        style_table={"overflowX": "auto", "minWidth": "100%", "height": "520px", "overflowY": "auto"},
+        style_table={"overflowX": "auto", "minWidth": "100%",
+                     "height": "520px", "overflowY": "auto"},
         style_header=_HEADER_STYLE,
         style_cell={**_CELL_STYLE, "minWidth": "60px"},
         style_cell_conditional=[
@@ -161,34 +161,27 @@ def pivot_table(pivot: pd.DataFrame) -> html.Div | dash_table.DataTable:
     )
 
 
-# ── Vehicle Card HTML ─────────────────────────────────────────────────────────
-# ── Type display ─────────────────────────────────────────────────────────────
-# Ключи: snake_case типы из vehicle_type + категории-фолбэки (имя папки)
+# ── Type display ──────────────────────────────────────────────────────────────
 TYPE_DISPLAY: dict[str, str] = {
-    # Наземка
     "medium_tank":        "Средний танк",
     "light_tank":         "Лёгкий танк",
     "heavy_tank":         "Тяжёлый танк",
     "tank_destroyer":     "Противотанковая САУ",
     "spaa":               "ЗСУ",
-    # Авиация
     "fighter":            "Истребитель",
     "bomber":             "Бомбардировщик",
     "assault":            "Штурмовик",
     "attack_helicopter":  "Ударный вертолёт",
     "utility_helicopter": "Вертолёт",
-    # Большой флот
     "destroyer":          "Эсминец",
     "battleship":         "Линкор",
     "light_cruiser":      "Лёгкий крейсер",
     "heavy_cruiser":      "Тяжёлый крейсер",
     "battlecruiser":      "Линейный крейсер",
-    # Малый флот
     "boat":               "Катер",
     "heavy_boat":         "Тяжёлый катер",
     "frigate":            "Фрегат",
     "barge":              "Баржа",
-    # Фолбэки (имя папки, когда vehicle_type пустой)
     "Ground":             "Наземка",
     "Aviation":           "Авиация",
     "LargeFleet":         "Большой флот",
@@ -198,7 +191,6 @@ TYPE_DISPLAY: dict[str, str] = {
 
 
 def fmt_type(raw_type: str) -> str:
-    """Возвращает читаемое русское название типа техники."""
     return TYPE_DISPLAY.get(str(raw_type), str(raw_type))
 
 
@@ -230,51 +222,80 @@ def _g(row: dict, col, default=None):
     return v
 
 
-def _armor_bar(label: str, value: float) -> str:
-    pct = min(100.0, (value / 500.0) * 100.0) if value > 0 else 0.0
-    if value >= 300:   color = "#ef4444"
-    elif value >= 150: color = "#f97316"
-    elif value >= 60:  color = "#fbbf24"
-    elif value > 0:    color = "#34d399"
-    else:              color = "#1e293b"
-    num = "—" if value == 0 else f"{value:.0f} мм"
-    return (
-        f'<div class="vc-armor-bar">'
-        f'<span class="vc-armor-label">{label}</span>'
-        f'<div class="vc-armor-track"><div class="vc-armor-fill" style="width:{pct:.0f}%;background:{color}"></div></div>'
-        f'<span class="vc-armor-num">{num}</span>'
-        f'</div>'
-    )
+# ── Dash-компонент карточки техники ──────────────────────────────────────────
 
-
-def _ammo_chip(atype: str) -> str:
-    t = str(atype).lower()
-    if "aphe" in t:                           cls, lbl = "chip-aphe",  "APHE"
-    elif "heat" in t or "hesh" in t:          cls, lbl = "chip-heat",  "HEAT/HESH"
-    elif "atgm" in t or "guided" in t:        cls, lbl = "chip-atgm",  "ATGM"
-    elif "apds" in t or "apfs" in t or "apcr" in t: cls, lbl = "chip-apds", t.upper()[:6]
-    elif "he_frag" in t or t == "he":         cls, lbl = "chip-he",    "HE"
-    elif "smoke" in t:                        cls, lbl = "chip-smoke", "Smoke"
-    else:                                     cls, lbl = "chip-other", t[:8].upper()
-    return f'<span class="vc-ammo-chip {cls}">{lbl}</span>'
-
-
-def _stat_row(label: str, value: str, cls: str = "vc-value") -> str:
-    return (
-        f'<div class="vc-row">'
-        f'<span class="vc-label">{label}</span>'
-        f'<span class="{cls}">{value}</span>'
-        f'</div>'
-    )
-
-
-def _score_col(v: float) -> str:
+def _score_color(v: float) -> str:
     if v >= 70: return "#34d399"
     if v >= 45: return "#fbbf24"
     return "#f87171"
 
 
-def generate_card_html(row: dict) -> str:
+def _stat_row_dash(label: str, value: str, color: str = "#e2e8f0") -> html.Div:
+    return html.Div([
+        html.Span(label, style={
+            "color": "#64748b", "fontSize": "11px",
+            "minWidth": "140px", "display": "inline-block",
+        }),
+        html.Span(value, style={
+            "color": color, "fontWeight": "600",
+            "fontFamily": "'JetBrains Mono', monospace", "fontSize": "12px",
+        }),
+    ], style={"display": "flex", "alignItems": "center", "padding": "2px 0"})
+
+
+def _score_circle(value: float, label: str, bg: str) -> html.Div:
+    color = _score_color(value)
+    return html.Div([
+        html.Span(f"{value:.0f}", style={
+            "fontFamily": "Rajdhani, sans-serif",
+            "fontSize": "1.3rem", "fontWeight": "700",
+            "color": color, "lineHeight": "1",
+        }),
+        html.Span(label, style={
+            "fontSize": "0.5rem", "color": color,
+            "letterSpacing": "0.1em", "textTransform": "uppercase",
+        }),
+    ], style={
+        "display": "inline-flex", "flexDirection": "column",
+        "alignItems": "center", "justifyContent": "center",
+        "width": "66px", "height": "66px", "borderRadius": "50%",
+        "border": f"3px solid {color}",
+        "background": f"radial-gradient(circle, {bg} 0%, #0f172a 100%)",
+        "boxShadow": f"0 0 14px {color}44", "flexShrink": "0",
+    })
+
+
+def _ammo_badge(atype: str) -> dbc.Badge:
+    t = str(atype).lower()
+    if "aphe" in t:
+        label, color = "APHE", "danger"
+    elif "heat" in t or "hesh" in t:
+        label, color = "HEAT/HESH", "warning"
+    elif "atgm" in t or "guided" in t:
+        label, color = "ATGM", "primary"
+    elif "apds" in t or "apfs" in t or "apcr" in t:
+        label, color = t.upper()[:6], "secondary"
+    elif "he_frag" in t or t == "he":
+        label, color = "HE", "success"
+    elif "smoke" in t:
+        label, color = "Smoke", "light"
+    else:
+        label, color = t[:8].upper(), "dark"
+    return dbc.Badge(label, color=color, className="me-1",
+                     style={"fontSize": "10px", "fontFamily": "'JetBrains Mono', monospace"})
+
+
+def _section_title(text: str) -> html.Div:
+    return html.Div(text, style={
+        "color": "#a7f3d0", "fontSize": "11px", "fontWeight": "700",
+        "letterSpacing": "0.12em", "textTransform": "uppercase",
+        "borderBottom": "1px solid #1e3a5f",
+        "paddingBottom": "4px", "marginTop": "12px", "marginBottom": "6px",
+    })
+
+
+def generate_card(row: dict) -> html.Div:
+    """Карточка техники — чистые Dash-компоненты, без HTML-строк."""
     name    = _g(row, "Name",    "—")
     nation  = str(_g(row, "Nation", "")).lower()
     br      = float(_g(row, "BR",  0))
@@ -298,12 +319,14 @@ def generate_card_html(row: dict) -> str:
     sl_mul_ab = float(_g(row, "vdb_sl_mul_arcade", 0))
     req_exp   = int(_g(row, "vdb_req_exp", 0))
     val_sl    = int(_g(row, "vdb_value", 0))
+
     hull_f    = float(_g(row, "vdb_hull_front",   0))
     hull_s    = float(_g(row, "vdb_hull_side",    0))
     hull_r    = float(_g(row, "vdb_hull_rear",    0))
     turt_f    = float(_g(row, "vdb_turret_front", 0))
     turt_s    = float(_g(row, "vdb_turret_side",  0))
     turt_r    = float(_g(row, "vdb_turret_rear",  0))
+
     caliber   = float(_g(row, "vdb_main_caliber_mm", 0))
     gun_spd   = float(_g(row, "vdb_main_gun_speed",  0))
     ammo_types = _g(row, "vdb_ammo_types", []) or []
@@ -311,9 +334,11 @@ def generate_card_html(row: dict) -> str:
     has_heat  = bool(_g(row, "vdb_has_heat",    False))
     has_aphe  = bool(_g(row, "vdb_has_aphe",    False))
     has_therm = bool(_g(row, "vdb_has_thermal", False))
+
     spd_rb    = int(_g(row, "vdb_engine_max_speed_rb", 0))
     hp_rb     = int(_g(row, "vdb_engine_hp_rb",        0))
     mass      = float(_g(row, "vdb_mass", 0))
+
     is_prem   = int(_g(row, "vdb_is_premium",       0))
     is_pack   = int(_g(row, "vdb_is_pack",          0))
     is_squad  = int(_g(row, "vdb_squadron_vehicle", 0))
@@ -326,123 +351,134 @@ def generate_card_html(row: dict) -> str:
     era_roman = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII"]
     era_str   = era_roman[era] if 0 < era < len(era_roman) else (str(era) if era else "—")
 
-    meta_col = _score_col(meta)
-    farm_col = _score_col(farm)
-    wr_cls   = "vc-value-green" if wr >= 55 else "vc-value-yellow" if wr >= 48 else "vc-value-red"
+    wr_color  = "#34d399" if wr >= 55 else "#fbbf24" if wr >= 48 else "#f87171"
+    net_sl    = sl_pg - rep_rb if sl_pg > 0 and rep_rb > 0 else 0
 
-    badges = ""
-    if is_prem:  badges += '<span class="vc-badge vc-badge-prem">★ Premium</span>'
-    if is_pack:  badges += '<span class="vc-badge vc-badge-pack">📦 Pack</span>'
-    if is_squad: badges += '<span class="vc-badge vc-badge-squad">✦ Squadron</span>'
-    if on_mkt:   badges += '<span class="vc-badge vc-badge-mkt">🏪 Marketplace</span>'
+    # ── Badges ────────────────────────────────────────────────────────────
+    badges = []
+    if is_prem:  badges.append(dbc.Badge("★ Premium",    color="warning", className="me-1"))
+    if is_pack:  badges.append(dbc.Badge("📦 Pack",      color="primary", className="me-1"))
+    if is_squad: badges.append(dbc.Badge("✦ Squadron",   color="info",    className="me-1"))
+    if on_mkt:   badges.append(dbc.Badge("🏪 Marketplace", color="secondary", className="me-1"))
 
-    rep_cls    = "vc-value-red" if rep_rb > 5000 else "vc-value-yellow" if rep_rb > 2000 else "vc-value-green"
-    sl_mul_cls = "vc-value-green" if sl_mul_rb >= 1.5 else "vc-value-yellow" if sl_mul_rb >= 1.0 else "vc-value-red"
-    net_sl     = sl_pg - rep_rb if sl_pg > 0 and rep_rb > 0 else 0
-    net_cls    = "vc-value-green" if net_sl > 0 else "vc-value-red"
+    # ── Header ────────────────────────────────────────────────────────────
+    header = html.Div([
+        html.Div(f"{flag} {name}", style={
+            "fontFamily": "Rajdhani, sans-serif",
+            "fontSize": "1.4rem", "fontWeight": "700", "color": "#e2e8f0",
+        }),
+        html.Div(
+            f"{type_icon} {fmt_type(vtype)}  ·  {nation.title()}  ·  БР {br:.1f}  ·  Ранг {era_str}",
+            style={"color": "#94a3b8", "fontSize": "12px", "marginTop": "2px"},
+        ),
+        html.Div(badges, style={"marginTop": "6px"}),
+    ], style={
+        "background": "linear-gradient(90deg, #0a2540 0%, #0f172a 100%)",
+        "borderBottom": "1px solid #1e3a5f",
+        "padding": "12px 16px",
+    })
 
-    econ = ""
-    if sl_pg > 0:     econ += _stat_row("SL / игру",        fmt_num(sl_pg),              "vc-value-yellow")
-    if rp_pg > 0:     econ += _stat_row("RP / игру",        fmt_num(rp_pg),              "vc-value-blue")
-    if net_sl != 0:   econ += _stat_row("Чистый SL / игру", fmt_num(net_sl, signed=True), net_cls)
-    if rep_rb > 0:    econ += _stat_row("Ремонт RB",        fmt_num(rep_rb, " SL"),      rep_cls)
-    if rep_fu > 0:    econ += _stat_row("Полный ремонт",    fmt_num(rep_fu, " SL"),      "vc-value")
-    if sl_mul_rb > 0: econ += _stat_row("SL-множитель RB",  f"×{sl_mul_rb:.2f}",         sl_mul_cls)
-    if sl_mul_ab > 0: econ += _stat_row("SL-множитель AB",  f"×{sl_mul_ab:.2f}",         "vc-value")
-    if req_exp > 0:   econ += _stat_row("Нужно RP",         fmt_num(req_exp),            "vc-value-blue")
-    if val_sl > 0:    econ += _stat_row("Стоимость",        fmt_num(val_sl, " SL"),      "vc-value")
-    econ_section = f'<div class="vc-section-title">💰 Экономика</div>{econ}' if econ else ""
+    # ── Score circles + base stats ────────────────────────────────────────
+    scores = html.Div([
+        _score_circle(meta, "META", "#064e3b"),
+        _score_circle(farm, "FARM", "#1c1917"),
+        html.Div([
+            _stat_row_dash("WinRate", f"{wr:.1f}%", wr_color),
+            _stat_row_dash("K/D",     f"{kd:.2f}"),
+            _stat_row_dash("Боёв",    fmt_num(battles)),
+        ], style={"display": "flex", "flexDirection": "column", "gap": "2px"}),
+    ], style={"display": "flex", "alignItems": "center", "gap": "20px",
+              "marginBottom": "12px"})
 
-    armor_html = ""
-    if any([hull_f, hull_s, hull_r, turt_f, turt_s, turt_r]):
-        armor_html = (
-            '<div class="vc-section-title">🛡️ Бронирование</div>'
-            + _armor_bar("Корпус: перед", hull_f)
-            + _armor_bar("Корпус: борт",  hull_s)
-            + _armor_bar("Корпус: корма", hull_r)
-            + _armor_bar("Башня: перед",  turt_f)
-            + _armor_bar("Башня: борт",   turt_s)
-            + _armor_bar("Башня: корма",  turt_r)
-        )
+    # ── Экономика ─────────────────────────────────────────────────────────
+    econ_rows = []
+    rep_color    = "#f87171" if rep_rb > 5000 else "#fbbf24" if rep_rb > 2000 else "#34d399"
+    sl_mul_color = "#34d399" if sl_mul_rb >= 1.5 else "#fbbf24" if sl_mul_rb >= 1.0 else "#f87171"
+    net_color    = "#34d399" if net_sl > 0 else "#f87171"
+    if sl_pg:   econ_rows.append(_stat_row_dash("SL / игру",        fmt_num(sl_pg),              "#fbbf24"))
+    if rp_pg:   econ_rows.append(_stat_row_dash("RP / игру",        fmt_num(rp_pg),              "#60a5fa"))
+    if net_sl:  econ_rows.append(_stat_row_dash("Чистый SL / игру", fmt_num(net_sl, signed=True), net_color))
+    if rep_rb:  econ_rows.append(_stat_row_dash("Ремонт RB",        fmt_num(rep_rb, " SL"),      rep_color))
+    if rep_fu:  econ_rows.append(_stat_row_dash("Полный ремонт",    fmt_num(rep_fu, " SL")))
+    if sl_mul_rb: econ_rows.append(_stat_row_dash("SL × RB",        f"×{sl_mul_rb:.2f}",         sl_mul_color))
+    if sl_mul_ab: econ_rows.append(_stat_row_dash("SL × AB",        f"×{sl_mul_ab:.2f}"))
+    if req_exp: econ_rows.append(_stat_row_dash("Нужно RP",         fmt_num(req_exp),             "#60a5fa"))
+    if val_sl:  econ_rows.append(_stat_row_dash("Стоимость",        fmt_num(val_sl, " SL")))
+    econ_section = [_section_title("💰 Экономика")] + econ_rows if econ_rows else []
 
-    weapon_rows = ""
-    if caliber:  weapon_rows += _stat_row("Калибр",        f"{caliber:.0f} мм")
-    if gun_spd:  weapon_rows += _stat_row("Нач. скорость", f"{gun_spd:.0f} м/с")
+    # ── Бронирование — простой текст ──────────────────────────────────────
+    armor_rows = []
+    armor_pairs = [
+        ("Корпус: перед", hull_f), ("Корпус: борт", hull_s), ("Корпус: корма", hull_r),
+        ("Башня: перед",  turt_f), ("Башня: борт",  turt_s), ("Башня: корма",  turt_r),
+    ]
+    for lbl, val in armor_pairs:
+        if val:
+            armor_rows.append(_stat_row_dash(lbl, f"{val:.0f} мм"))
+    armor_section = [_section_title("🛡️ Бронирование")] + armor_rows if armor_rows else []
+
+    # ── Вооружение ────────────────────────────────────────────────────────
+    weapon_rows = []
+    if caliber: weapon_rows.append(_stat_row_dash("Калибр",        f"{caliber:.0f} мм"))
+    if gun_spd: weapon_rows.append(_stat_row_dash("Нач. скорость", f"{gun_spd:.0f} м/с"))
     perks = []
     if has_atgm:  perks.append("🚀 ATGM")
     if has_therm: perks.append("🌡️ Термооптика")
     if has_heat:  perks.append("🔥 HEAT/HESH")
     if has_aphe:  perks.append("💥 APHE")
-    ammo_chips = ("".join(_ammo_chip(t) for t in ammo_types[:12])
-                  if ammo_types else '<span style="color:#475569;font-size:.7rem">нет данных</span>')
-    perks_html = (f'<div style="margin-top:6px;font-size:.72rem;color:#a7f3d0">{" &nbsp;|&nbsp; ".join(perks)}</div>'
-                  if perks else "")
+    ammo_badges = [_ammo_badge(t) for t in (ammo_types or [])[:12]]
+    weapon_extras = []
+    if ammo_badges:
+        weapon_extras.append(html.Div(ammo_badges, style={"marginTop": "6px"}))
+    if perks:
+        weapon_extras.append(html.Div(
+            "  |  ".join(perks),
+            style={"marginTop": "4px", "fontSize": "11px", "color": "#a7f3d0"},
+        ))
     weapon_section = (
-        f'<div class="vc-section-title">🔫 Вооружение</div>'
-        f'{weapon_rows}<div style="margin-top:6px">{ammo_chips}</div>{perks_html}'
-    ) if (weapon_rows or ammo_types or perks) else ""
+        [_section_title("🔫 Вооружение")] + weapon_rows + weapon_extras
+        if (weapon_rows or ammo_badges or perks) else []
+    )
 
-    mobility_html = ""
-    if spd_rb > 0 or hp_rb > 0:
+    # ── Подвижность ───────────────────────────────────────────────────────
+    mobility_section = []
+    if spd_rb or hp_rb:
         pw = (hp_rb / (mass / 1000)) if mass > 0 and hp_rb > 0 else 0
-        pw_cls = "vc-value-green" if pw >= 20 else "vc-value-yellow" if pw >= 12 else "vc-value-red"
-        parts = []
-        if spd_rb: parts.append(f"Скорость {spd_rb} км/ч")
-        if pw:     parts.append(f"Уд. мощность <span class='{pw_cls}'>{pw:.1f} л.с./т</span>")
-        if crew:   parts.append(f"Экипаж {crew} чел.")
-        mobility_html = (
-            '<div class="vc-section-title">⚡ Подвижность</div>'
-            '<div style="font-size:.78rem;color:#e2e8f0;display:flex;gap:20px;flex-wrap:wrap">'
-            + "".join(f"<span>{p}</span>" for p in parts) + "</div>"
-        )
+        pw_color = "#34d399" if pw >= 20 else "#fbbf24" if pw >= 12 else "#f87171"
+        mob_rows = []
+        if spd_rb: mob_rows.append(_stat_row_dash("Скорость",     f"{spd_rb} км/ч"))
+        if pw:     mob_rows.append(_stat_row_dash("Уд. мощность", f"{pw:.1f} л.с./т", pw_color))
+        if crew:   mob_rows.append(_stat_row_dash("Экипаж",       f"{crew} чел."))
+        mobility_section = [_section_title("⚡ Подвижность")] + mob_rows
 
-    footer_match = f"✅ match {match_sc:.0%}" if match_sc > 0 else "⚠️ vdb нет данных"
-    footer_extra = ""
-    if rel_date: footer_extra += f"Добавлено: {rel_date}"
-    if ver:      footer_extra += f"&nbsp;|&nbsp;{ver}"
+    # ── Footer ────────────────────────────────────────────────────────────
+    footer_parts = []
+    if identifier: footer_parts.append(identifier)
+    if rel_date:   footer_parts.append(f"Добавлено: {rel_date}")
+    if ver:        footer_parts.append(ver)
+    match_txt = f"✅ match {match_sc:.0%}" if match_sc > 0 else "⚠️ vdb нет данных"
+    footer_parts.append(match_txt)
 
-    return f"""
-<div class="vc-card">
-  <div class="vc-header">
-    <div class="vc-title">{flag} {name}</div>
-    <div class="vc-subtitle">
-      {type_icon} {vtype.replace("_", " ").title()}
-      &nbsp;·&nbsp; {nation.title()}
-      &nbsp;·&nbsp; БР {br:.1f}
-      &nbsp;·&nbsp; Ранг {era_str}
-    </div>
-    <div style="margin-top:8px">{badges}</div>
-  </div>
-  <div class="vc-body">
-    <div style="display:flex;align-items:center;gap:20px;margin-bottom:12px">
-      <div style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;
-                  width:66px;height:66px;border-radius:50%;border:3px solid {meta_col};
-                  background:radial-gradient(circle,#064e3b 0%,#0f172a 100%);
-                  box-shadow:0 0 14px {meta_col}44;flex-shrink:0">
-        <span style="font-family:Rajdhani,sans-serif;font-size:1.3rem;font-weight:700;color:{meta_col};line-height:1">{meta:.0f}</span>
-        <span style="font-size:.5rem;color:#6ee7b7;letter-spacing:.1em;text-transform:uppercase">META</span>
-      </div>
-      <div style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;
-                  width:66px;height:66px;border-radius:50%;border:3px solid {farm_col};
-                  background:radial-gradient(circle,#1c1917 0%,#0f172a 100%);
-                  box-shadow:0 0 14px {farm_col}44;flex-shrink:0">
-        <span style="font-family:Rajdhani,sans-serif;font-size:1.3rem;font-weight:700;color:{farm_col};line-height:1">{farm:.0f}</span>
-        <span style="font-size:.5rem;color:#a78bfa;letter-spacing:.1em;text-transform:uppercase">FARM</span>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:3px;font-size:.78rem">
-        {_stat_row("WinRate", f"{wr:.1f}%", wr_cls)}
-        {_stat_row("K/D",     f"{kd:.2f}")}
-        {_stat_row("Боёв",    fmt_num(battles))}
-      </div>
-    </div>
-    {econ_section}
-    {armor_html}
-    {weapon_section}
-    {mobility_html}
-  </div>
-  <div class="vc-footer">
-    <span>{identifier or "—"}</span>
-    <span>{footer_extra}</span>
-    <span>{footer_match}</span>
-  </div>
-</div>"""
+    footer = html.Div(
+        "  ·  ".join(footer_parts),
+        style={
+            "borderTop": "1px solid #1e3a5f", "marginTop": "12px",
+            "paddingTop": "8px", "color": "#475569", "fontSize": "10px",
+        },
+    )
+
+    body_children = [scores] + econ_section + armor_section + weapon_section + mobility_section + [footer]
+
+    return html.Div([
+        header,
+        html.Div(body_children, style={"padding": "12px 16px"}),
+    ], style={
+        "background": "#0f172a",
+        "border": "1px solid #1e3a5f",
+        "borderRadius": "8px",
+        "overflow": "hidden",
+    })
+
+
+# Обратная совместимость для sidebar.py и других мест
+generate_card_html = generate_card
