@@ -1,0 +1,371 @@
+/* ══════════════════════════════════════════════════════════════
+   WT META CENTER — Dash Edition
+   Dark military-tech theme
+   ══════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+/* ── Base ──────────────────────────────────────────────────────── */
+:root {
+    --bg-darkest:  #07101c;
+    --bg-dark:     #0f172a;
+    --bg-card:     #111827;
+    --bg-surface:  #1e293b;
+    --bg-elevated: #263548;
+    --border:      #1e3a5f;
+    --border-glow: #10b981;
+    --text-primary:   #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-muted:     #475569;
+    --accent-green:  #10b981;
+    --accent-green2: #34d399;
+    --accent-blue:   #60a5fa;
+    --accent-purple: #a78bfa;
+    --accent-yellow: #fbbf24;
+    --accent-red:    #f87171;
+    --accent-orange: #f97316;
+}
+
+html, body {
+    background-color: var(--bg-dark) !important;
+    color: var(--text-primary) !important;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+}
+
+.container-fluid { padding: 0 !important; }
+
+/* ── Scrollbar ─────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-darkest); }
+::-webkit-scrollbar-thumb { background: var(--bg-surface); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-glow); }
+
+/* ── Sidebar ───────────────────────────────────────────────────── */
+#sidebar {
+    background: linear-gradient(180deg, #0a1628 0%, #0f172a 100%);
+    border-right: 1px solid var(--border);
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: sticky;
+    top: 0;
+    padding: 16px 12px;
+}
+
+#sidebar h5 {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--accent-green2) !important;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+    margin-bottom: 14px;
+}
+
+#sidebar .section-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin: 14px 0 6px 0;
+}
+
+#sidebar hr { border-color: var(--border); margin: 12px 0; }
+
+/* ── Dash label overrides ──────────────────────────────────────── */
+.form-label, label {
+    color: var(--text-secondary) !important;
+    font-size: 0.75rem !important;
+    letter-spacing: 0.05em;
+}
+
+/* ── Dropdowns ─────────────────────────────────────────────────── */
+.Select-control, .Select-menu-outer {
+    background-color: var(--bg-surface) !important;
+    border-color: var(--border) !important;
+    color: var(--text-primary) !important;
+}
+.Select-value-label, .Select-placeholder { color: var(--text-primary) !important; }
+.Select-menu { background: var(--bg-surface) !important; }
+.Select-option { background: var(--bg-surface) !important; color: var(--text-primary) !important; }
+.Select-option:hover, .Select-option.is-focused { background: var(--bg-elevated) !important; }
+.Select-option.is-selected { background: var(--border) !important; color: var(--accent-green2) !important; }
+.Select--multi .Select-value { background: var(--bg-elevated) !important; border-color: var(--border) !important; color: var(--text-primary) !important; }
+.VirtualizedSelectOption { background: var(--bg-surface) !important; color: var(--text-primary) !important; }
+
+/* DCC Select */
+.dash-dropdown .Select-control { background: var(--bg-surface) !important; border-color: var(--border) !important; }
+.dash-dropdown input { color: var(--text-primary) !important; }
+
+/* ── Inputs / Number inputs ────────────────────────────────────── */
+input[type="number"], .form-control {
+    background: var(--bg-surface) !important;
+    border-color: var(--border) !important;
+    color: var(--text-primary) !important;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem !important;
+}
+input:focus, .form-control:focus {
+    border-color: var(--accent-green) !important;
+    box-shadow: 0 0 0 2px rgba(16,185,129,0.15) !important;
+    background: var(--bg-surface) !important;
+    color: var(--text-primary) !important;
+}
+
+/* ── Checkboxes ────────────────────────────────────────────────── */
+.form-check-label { color: var(--text-primary) !important; font-size: 0.82rem !important; }
+.form-check-input {
+    background-color: var(--bg-surface) !important;
+    border-color: var(--border) !important;
+}
+.form-check-input:checked {
+    background-color: var(--accent-green) !important;
+    border-color: var(--accent-green) !important;
+}
+
+/* ── Sliders ───────────────────────────────────────────────────── */
+.rc-slider-rail       { background: var(--bg-elevated) !important; }
+.rc-slider-track      { background: var(--accent-green) !important; }
+.rc-slider-handle     { border-color: var(--accent-green) !important; background: var(--bg-dark) !important; }
+.rc-slider-handle:hover { box-shadow: 0 0 8px var(--accent-green) !important; }
+.rc-slider-mark-text  { color: var(--text-muted) !important; font-size: 0.6rem !important; }
+
+/* Dash dcc.RangeSlider / dcc.Slider — перекраска фиолетового в зелёный */
+.dash-slider-container input[type=range]::-webkit-slider-thumb { background: var(--accent-green) !important; }
+.dash-slider-container input[type=range]::-moz-range-thumb     { background: var(--accent-green) !important; }
+
+/* Новый Dash Slider (>= 2.9) использует .rc-slider внутри */
+.rc-slider-track-1      { background: var(--accent-green) !important; }
+.rc-slider-handle-1,
+.rc-slider-handle-2     {
+    border-color: var(--accent-green) !important;
+    background:   var(--bg-dark) !important;
+    box-shadow: 0 0 0 2px rgba(16,185,129,0.25) !important;
+    opacity: 1 !important;
+}
+.rc-slider-handle-1:hover,
+.rc-slider-handle-2:hover,
+.rc-slider-handle-1:active,
+.rc-slider-handle-2:active {
+    box-shadow: 0 0 10px var(--accent-green) !important;
+    border-color: var(--accent-green2) !important;
+}
+.rc-slider-dot-active { border-color: var(--accent-green) !important; }
+.rc-slider-tooltip-inner {
+    background: var(--bg-surface) !important;
+    color: var(--accent-green2) !important;
+    border: 1px solid var(--border) !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 0.7rem !important;
+}
+
+.rc-slider-dot        { border-color: var(--border) !important; background: var(--bg-dark) !important; }
+.rc-slider-dot-active { border-color: var(--accent-green) !important; }
+
+/* ── Buttons ───────────────────────────────────────────────────── */
+.btn-primary, .btn-success {
+    background: var(--accent-green) !important;
+    border-color: var(--accent-green) !important;
+    color: #000 !important;
+    font-family: 'Rajdhani', sans-serif !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.1em !important;
+    transition: all .2s;
+}
+.btn-primary:hover, .btn-success:hover {
+    background: var(--accent-green2) !important;
+    box-shadow: 0 0 16px rgba(16,185,129,0.4) !important;
+    transform: translateY(-1px);
+}
+.btn-outline-secondary {
+    border-color: var(--border) !important;
+    color: var(--text-secondary) !important;
+    font-size: 0.75rem !important;
+}
+
+/* ── Cards / Panels ────────────────────────────────────────────── */
+.panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 14px;
+}
+.panel-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent-green);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+    margin-bottom: 12px;
+}
+
+/* ── Tabs ──────────────────────────────────────────────────────── */
+.nav-tabs { border-bottom: 2px solid var(--border) !important; }
+.nav-link {
+    color: var(--text-secondary) !important;
+    font-family: 'Rajdhani', sans-serif !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.05em !important;
+    font-size: 0.95rem !important;
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 2px solid transparent !important;
+    transition: all .2s !important;
+    padding: 10px 20px !important;
+}
+.nav-link:hover { color: var(--text-primary) !important; border-bottom-color: var(--bg-surface) !important; }
+.nav-link.active {
+    color: var(--accent-green2) !important;
+    border-bottom: 2px solid var(--accent-green) !important;
+    background: rgba(16,185,129,0.05) !important;
+}
+.tab-content { padding-top: 16px; }
+
+/* Dcc.Tabs */
+.dash-tab {
+    background: transparent !important;
+    border: none !important;
+    color: var(--text-secondary) !important;
+    font-family: 'Rajdhani', sans-serif !important;
+    font-size: 0.95rem !important;
+}
+.dash-tab--selected {
+    background: rgba(16,185,129,0.07) !important;
+    border-top: 2px solid var(--accent-green) !important;
+    color: var(--accent-green2) !important;
+}
+.dash-tabs { border-bottom: 2px solid var(--border) !important; }
+
+/* ── DataTable ─────────────────────────────────────────────────── */
+.dash-table-container { font-family: 'JetBrains Mono', monospace; }
+.dash-header { background: var(--bg-surface) !important; color: var(--accent-green2) !important; font-size: 0.7rem !important; letter-spacing: 0.1em !important; text-transform: uppercase !important; border-bottom: 1px solid var(--border) !important; }
+.dash-cell   { background: var(--bg-dark) !important; color: var(--text-primary) !important; border-bottom: 1px solid var(--border) !important; font-size: 0.78rem !important; }
+.dash-cell:hover { background: var(--bg-surface) !important; }
+.dash-spreadsheet-container .dash-spreadsheet-inner th { background: var(--bg-surface) !important; }
+.row-selected td { background: rgba(16,185,129,0.12) !important; }
+.cell--selected { background: rgba(16,185,129,0.15) !important; }
+
+/* ── Alerts / Info boxes ───────────────────────────────────────── */
+.alert-info    { background: rgba(96,165,250,0.1) !important; border-color: var(--accent-blue) !important; color: var(--accent-blue) !important; }
+.alert-warning { background: rgba(251,191,36,0.1) !important; border-color: var(--accent-yellow) !important; color: var(--accent-yellow) !important; }
+.alert-success { background: rgba(16,185,129,0.1) !important; border-color: var(--accent-green) !important; color: var(--accent-green2) !important; }
+.alert-danger  { background: rgba(248,113,113,0.1) !important; border-color: var(--accent-red) !important; color: var(--accent-red) !important; }
+.alert { font-size: 0.82rem !important; border-radius: 8px !important; }
+
+/* ── Vehicle Card ──────────────────────────────────────────────── */
+.vc-card {
+    background: linear-gradient(135deg, #0f172a 0%, #1a2744 50%, #0f172a 100%);
+    border: 1px solid #1e3a5f;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 0 40px rgba(16,185,129,0.08), 0 4px 24px rgba(0,0,0,0.5);
+    font-family: 'JetBrains Mono', monospace;
+}
+.vc-header {
+    background: linear-gradient(90deg, #064e3b, #065f46, #1e3a5f);
+    padding: 18px 24px 14px;
+    border-bottom: 1px solid #10b981;
+    position: relative;
+    overflow: hidden;
+}
+.vc-header::before {
+    content: '';
+    position: absolute;
+    top: -20px; right: -20px;
+    width: 120px; height: 120px;
+    background: radial-gradient(circle, rgba(16,185,129,0.15) 0%, transparent 70%);
+    border-radius: 50%;
+}
+.vc-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #ecfdf5;
+    letter-spacing: 0.05em;
+    text-shadow: 0 0 20px rgba(16,185,129,0.4);
+    margin: 0 0 4px 0;
+}
+.vc-subtitle { font-size: 0.75rem; color: #6ee7b7; letter-spacing: 0.12em; text-transform: uppercase; }
+.vc-badge       { display:inline-block; padding:2px 10px; border-radius:4px; font-size:0.7rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; margin-right:6px; }
+.vc-badge-prem  { background:#78350f; color:#fde68a; border:1px solid #d97706; }
+.vc-badge-pack  { background:#312e81; color:#c7d2fe; border:1px solid #6366f1; }
+.vc-badge-squad { background:#1e3a5f; color:#93c5fd; border:1px solid #3b82f6; }
+.vc-badge-mkt   { background:#4a044e; color:#f0abfc; border:1px solid #a855f7; }
+.vc-body          { padding: 20px 24px; }
+.vc-section-title { font-family:'Rajdhani',sans-serif; font-size:0.7rem; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:#10b981; border-bottom:1px solid #1e3a5f; padding-bottom:4px; margin:16px 0 10px 0; }
+.vc-row   { display:flex; justify-content:space-between; align-items:center; padding:3px 0; font-size:0.78rem; }
+.vc-label { color:#64748b; }
+.vc-value        { color:#e2e8f0; font-weight:600; }
+.vc-value-green  { color:#34d399; font-weight:700; }
+.vc-value-yellow { color:#fbbf24; font-weight:700; }
+.vc-value-red    { color:#f87171; font-weight:700; }
+.vc-value-blue   { color:#60a5fa; font-weight:700; }
+.vc-armor-bar   { display:flex; align-items:center; gap:6px; margin:3px 0; font-size:0.73rem; }
+.vc-armor-label { color:#64748b; width:110px; flex-shrink:0; }
+.vc-armor-track { flex:1; height:6px; background:#1e293b; border-radius:3px; overflow:hidden; }
+.vc-armor-fill  { height:100%; border-radius:3px; }
+.vc-armor-num   { color:#e2e8f0; font-weight:600; width:46px; text-align:right; flex-shrink:0; }
+.vc-ammo-chip { display:inline-block; padding:2px 7px; margin:2px 2px; border-radius:3px; font-size:0.65rem; font-weight:600; letter-spacing:0.05em; text-transform:uppercase; }
+.chip-aphe  { background:#7f1d1d; color:#fca5a5; border:1px solid #ef4444; }
+.chip-heat  { background:#78350f; color:#fed7aa; border:1px solid #f97316; }
+.chip-atgm  { background:#14532d; color:#86efac; border:1px solid #22c55e; }
+.chip-apds  { background:#1e3a5f; color:#93c5fd; border:1px solid #3b82f6; }
+.chip-he    { background:#4a044e; color:#f0abfc; border:1px solid #a855f7; }
+.chip-smoke { background:#1c1917; color:#a8a29e; border:1px solid #57534e; }
+.chip-other { background:#1e293b; color:#94a3b8; border:1px solid #475569; }
+.vc-footer { background:#0b1120; border-top:1px solid #1e293b; padding:10px 24px; font-size:0.67rem; color:#334155; display:flex; justify-content:space-between; font-family:monospace; }
+
+/* ── Sidebar search ────────────────────────────────────────────── */
+.search-input input {
+    background: var(--bg-surface) !important;
+    border-color: var(--border) !important;
+    color: var(--text-primary) !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 0.78rem !important;
+}
+
+/* ── Top header bar ────────────────────────────────────────────── */
+#topbar {
+    background: linear-gradient(90deg, #064e3b 0%, #0f172a 40%, #0f172a 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+#topbar h3 {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--accent-green2);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin: 0;
+}
+.topbar-badge {
+    font-size: 0.65rem;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: rgba(16,185,129,0.15);
+    border: 1px solid var(--accent-green);
+    color: var(--accent-green2);
+    letter-spacing: 0.1em;
+}
+
+/* ── Farm role badges ──────────────────────────────────────────── */
+.role-anchor  { color: #93c5fd; font-weight: 700; }
+.role-top     { color: #fbbf24; }
+.role-reserve { color: #94a3b8; }
+
+/* ── Misc ──────────────────────────────────────────────────────── */
+.text-muted-sm { font-size: 0.72rem; color: var(--text-muted); }
+.caption-text  { font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 8px; }
+.divider { border-top: 1px solid var(--border); margin: 12px 0; }
