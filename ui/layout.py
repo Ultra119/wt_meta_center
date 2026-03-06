@@ -41,7 +41,7 @@ def _sidebar(all_nations: list, tf_data: TypeFilterData) -> html.Div:
         dcc.Dropdown(
             id="sb-mode",
             options=[{"label": m, "value": m} for m in ["All/Mixed", "Realistic", "Arcade", "Sim"]],
-            value="All/Mixed", clearable=False,
+            value="All/Mixed", clearable=False, searchable=False,
         ),
         html.Hr(),
 
@@ -79,7 +79,7 @@ def _sidebar(all_nations: list, tf_data: TypeFilterData) -> html.Div:
             id="sb-classes",
             options=class_opts,
             value=["Standard", "Premium", "Pack", "Squadron", "Marketplace"],
-            multi=True, clearable=False, placeholder="Все классы",
+            multi=True, clearable=False, placeholder="Все классы", searchable=False,
         ),
         html.Hr(),
 
@@ -99,7 +99,7 @@ def _tab_meta(all_nations: list) -> html.Div:
                 dcc.Dropdown(
                     id="meta-nation",
                     options=[{"label": n, "value": n} for n in all_nations],
-                    value="All", clearable=False,
+                    value="All", clearable=False, searchable=False,
                 ),
             ], width=2),
             dbc.Col([
@@ -125,7 +125,7 @@ def _tab_redbook(all_nations: list) -> html.Div:
                 dcc.Dropdown(
                     id="rb-nation",
                     options=[{"label": n, "value": n} for n in all_nations],
-                    value="All", clearable=False,
+                    value="All", clearable=False, searchable=False,
                 ),
             ], width=2),
             dbc.Col([
@@ -148,7 +148,7 @@ def _tab_brackets() -> html.Div:
         if with_step:
             cols.append(dbc.Col([
                 html.Div("Детализация", className="section-label"),
-                dcc.Dropdown(id=f"br-step-{sfx}", options=_STEP_OPTS, value=1, clearable=False),
+                dcc.Dropdown(id=f"br-step-{sfx}", options=_STEP_OPTS, value=1, clearable=False, searchable=False),
             ], width=3))
         cols += [
             dbc.Col([
@@ -200,7 +200,7 @@ def _tab_farm(all_nations: list, tf_data: TypeFilterData) -> html.Div:
                 dcc.Dropdown(
                     id="farm-br",
                     options=[{"label": str(v), "value": v} for v in WT_BR_STEPS],
-                    value=7.0, clearable=False,
+                    value=7.0, clearable=False, searchable=False,
                 ),
             ], width=3),
             dbc.Col([
@@ -208,7 +208,7 @@ def _tab_farm(all_nations: list, tf_data: TypeFilterData) -> html.Div:
                 dcc.Dropdown(
                     id="farm-nation",
                     options=[{"label": n, "value": n} for n in all_nations],
-                    value="All", clearable=False,
+                    value="All", clearable=False, searchable=False,
                 ),
             ], width=3),
             dbc.Col([
@@ -216,7 +216,7 @@ def _tab_farm(all_nations: list, tf_data: TypeFilterData) -> html.Div:
                 dcc.Dropdown(
                     id="farm-type",
                     options=[{"label": o, "value": o} for o in tf_data.farm_type_opts],
-                    value="All", clearable=False,
+                    value="All", clearable=False, searchable=False,
                 ),
             ], width=3),
             dbc.Col([
@@ -225,7 +225,7 @@ def _tab_farm(all_nations: list, tf_data: TypeFilterData) -> html.Div:
                     id="farm-goal",
                     options=[{"label": "💰 SL (Фарм)", "value": "SL"},
                              {"label": "📚 RP (Грайнд)", "value": "RP"}],
-                    value="SL", clearable=False,
+                    value="SL", clearable=False, searchable=False,
                 ),
             ], width=3),
         ], className="panel mb-3"),
