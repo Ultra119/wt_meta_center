@@ -249,9 +249,11 @@ def build_progression_data(df: pd.DataFrame, nation: str) -> pd.DataFrame:
                 )
                 std_df.at[row_idx, "Verdict"] = VERDICT_MUST if qualifies_must else VERDICT_PASS
 
-    _CROSS_THRESHOLD  = 1.30
-    _CROSS_BR_WINDOW  = 0.7
-    _SKIP_CROSS       = {"spaa"}
+    _CROSS_THRESHOLD      = 1.30
+    _CROSS_SKIP_THRESHOLD = 1.40
+    _CROSS_BR_WINDOW      = 0.7
+    _SKIP_CROSS           = {"spaa"}
+    _NO_CROSS_SKIP_BRANCHES = {"spaa"}
 
     # Предвычисляем суперкатегорию один раз
     std_df["_super_cat"] = std_df["_branch"].apply(_super_cat)
@@ -278,7 +280,6 @@ def build_progression_data(df: pd.DataFrame, nation: str) -> pd.DataFrame:
                 (std_df["_super_cat"] == our_cat) &
                 (std_df["BR"] >= our_br - _CROSS_BR_WINDOW) &
                 (std_df["BR"] <= our_br + _CROSS_BR_WINDOW) &
-                (std_df["BR"]         != our_br) &
                 (std_df["Verdict"]    != VERDICT_SKIP)
             )
             for alt_idx, alt_row in std_df[mask].iterrows():
@@ -297,8 +298,22 @@ def build_progression_data(df: pd.DataFrame, nation: str) -> pd.DataFrame:
                     f"Для сетапа лучше «{best_cross_name}» ({best_cross_br:.1f}) "
                     f"— он сильнее в своём BR"
                 )
-                if std_df.at[row_idx, "Verdict"] == VERDICT_MUST:
+                cur_verdict = std_df.at[row_idx, "Verdict"]
+                if cur_verdict == VERDICT_MUST:
                     std_df.at[row_idx, "Verdict"] = VERDICT_PASS
+                elif (
+                    cur_verdict == VERDICT_PASS
+                    and our_branch not in _NO_CROSS_SKIP_BRANCHES
+                    and best_cross_meta > our_meta * _CROSS_SKIP_THRESHOLD
+                ):
+                    # PASS → SKIP: кросс-ветка значительно лучше, качать эту нет смысла
+                    std_df.at[row_idx, "Verdict"]     = VERDICT_SKIP
+                    std_df.at[row_idx, "Skip_Reason"] = (
+                        f"Лучше качать «{best_cross_name}» ({best_cross_br:.1f}) "
+                        f"из соседней ветки (META {best_cross_meta:.0f} vs {our_meta:.0f})"
+                    )
+                    std_df.at[row_idx, "Alt_Vehicle"] = best_cross_name
+                    std_df.at[row_idx, "Cross_Hint"]  = ""  # не дублируем
 
     std_df.drop(columns=["_super_cat"], errors="ignore", inplace=True)
 
