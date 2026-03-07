@@ -539,10 +539,9 @@ def register(app, core, all_nations, all_types, tf_data) -> None:
         Output("prog-info",   "children"),
         Input("prog-nation",  "value"),
         Input("prog-branch",  "value"),
-        Input("sb-classes",   "value"),
         Input("sb-mode",      "value"),
     )
-    def update_grid(nation, branch, classes, mode):
+    def update_grid(nation, branch, mode):
         if not nation or nation == "All":
             return (
                 dbc.Alert("⬅️ Выберите нацию для построения дерева.", color="info"),
@@ -552,9 +551,6 @@ def register(app, core, all_nations, all_types, tf_data) -> None:
         df = core.get_progression_data(nation, mode=mode or "All/Mixed")
         if df.empty:
             return dbc.Alert(f"Нет данных для нации «{nation}».", color="info"), ""
-
-        if classes and "VehicleClass" in df.columns:
-            df = df[df["VehicleClass"].isin(classes)]
 
         prog_df = build_progression_data(df, nation)
         if prog_df.empty:
