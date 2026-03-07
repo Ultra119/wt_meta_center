@@ -75,7 +75,6 @@ def _vehicle_card(row: dict, card_id: str) -> html.Div:
 
     # ── Название + BR ─────────────────────────────────────────────────────────
     header_row = html.Div([
-        _verdict_badge(verdict),
         _type_dot(vtype),
         html.Span(
             f"{prefix}{name}",
