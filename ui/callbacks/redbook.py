@@ -29,8 +29,12 @@ def register(app, core, all_types, tf_data) -> None:
         Input("sb-small-fleet", "value"),
         Input("rb-nation",      "value"),
         Input("rb-br",          "value"),
+        Input("main-tabs",      "active_tab"),
     )
-    def update(mode, battles, classes, ground, air, lf, sf, nation, br_range):
+    def update(mode, battles, classes, ground, air, lf, sf, nation, br_range, active_tab):
+        if active_tab and active_tab != "tab-redbook":
+            from dash import no_update
+            return no_update
         types_list = get_types(ground, air, lf, sf)
         filters    = build_filters(mode, battles, classes, nation, br_range)
 

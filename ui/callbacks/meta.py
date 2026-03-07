@@ -54,8 +54,12 @@ def register(app, core, all_nations, all_types, tf_data) -> None:
         Input("sb-small-fleet", "value"),
         Input("meta-nation",    "value"),
         Input("meta-br",        "value"),
+        Input("main-tabs",      "active_tab"),
     )
-    def update_table(mode, battles, classes, ground, air, lf, sf, nation, br_range):
+    def update_table(mode, battles, classes, ground, air, lf, sf, nation, br_range, active_tab):
+        if active_tab and active_tab != "tab-meta":
+            from dash import no_update
+            return no_update, no_update, no_update, no_update
         types_list = get_types(ground, air, lf, sf)
         filters = build_filters(mode, battles, classes, nation, br_range)
 

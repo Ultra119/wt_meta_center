@@ -49,7 +49,7 @@ def build_filters(
         "min_br":          float(br_range[0]) if br_range else BR_MIN,
         "max_br":          float(br_range[1]) if br_range else BR_MAX,
         "min_battles":     int(battles or 50),
-        "vehicle_classes": classes or ["Standard", "Premium", "Pack", "Squadron", "Marketplace"],
+        "vehicle_classes": classes or ["Standard", "Premium", "Pack", "Squadron", "Marketplace", "Gift", "Event"],
     }
 
 
