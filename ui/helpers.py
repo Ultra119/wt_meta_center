@@ -62,12 +62,48 @@ _CELL_STYLE = {
     "fontFamily": "'JetBrains Mono', monospace",
     "fontSize": "12px",
     "padding": "6px 10px",
+    "overflow": "hidden",
+    "textOverflow": "ellipsis",
+    "whiteSpace": "nowrap",
 }
 _SEL_STYLE = [
     {"if": {"state": "active"},
      "backgroundColor": "rgba(16,185,129,0.12)",
      "border": "1px solid #10b981"},
 ]
+
+COL_WIDTHS: dict[str, int] = {
+    "Name_Display":   180,
+    "Name":           180,
+    "Nation":          80,
+    "BR":              54,
+    "Type":           120,
+    "Type_Display":   120,
+    "Роль":            90,
+    "Техника":        180,
+    "Сыграно игр":     80,
+    "WR":              58,
+    "KD":              54,
+    "META_SCORE":      62,
+    "FARM_SCORE":      62,
+    "Net SL за игру":  90,
+    "SL за игру":      80,
+    "RP за игру":      70,
+    "FARM_SCORE":      62,
+}
+
+def _col_width_styles(cols: list[str]) -> list[dict]:
+    styles = []
+    for c in cols:
+        w = COL_WIDTHS.get(c)
+        if w:
+            styles.append({
+                "if": {"column_id": c},
+                "width":    f"{w}px",
+                "minWidth": f"{w}px",
+                "maxWidth": f"{w}px",
+            })
+    return styles
 
 
 def dark_table(
@@ -78,6 +114,7 @@ def dark_table(
     sort_by: list | None = None,
     selectable: bool = False,
     extra_cond_styles: list | None = None,
+    extra_cell_cond: list | None = None,
     table_id: str | None = None,
     max_height: str = "520px",
     virtualize: bool = True,
@@ -89,15 +126,21 @@ def dark_table(
             {
                 "name": col_names.get(c, c),
                 "id": c,
-                "type": "numeric" if c not in ("Name_Display", "Name", "Nation", "Type", "Роль") else "text",
+                "type": "numeric" if c not in ("Name_Display", "Name", "Nation", "Type", "Type_Display", "Роль", "Техника") else "text",
             }
             for c in cols_avail
         ],
         virtualization=virtualize,
-        style_table={"overflowX": "auto", "minWidth": "100%",
-                     "height": max_height, "overflowY": "auto"},
+        style_table={
+            "overflowX": "auto",
+            "minWidth": "100%",
+            "height": max_height,
+            "overflowY": "auto",
+            "tableLayout": "fixed",   # ← фиксирует ширины, без него браузер пересчитывает
+        },
         style_header=_HEADER_STYLE,
         style_cell=_CELL_STYLE,
+        style_cell_conditional=_col_width_styles(cols_avail) + (extra_cell_cond or []),
         style_data_conditional=_SEL_STYLE + (extra_cond_styles or []),
         fixed_rows={"headers": True},
         sort_action="native",
@@ -148,13 +191,18 @@ def pivot_table(pivot: pd.DataFrame) -> html.Div | dash_table.DataTable:
         data=records,
         columns=[{"name": c, "id": c} for c in pivot.columns],
         virtualization=True,
-        style_table={"overflowX": "auto", "minWidth": "100%",
-                     "height": "520px", "overflowY": "auto"},
+        style_table={
+            "overflowX": "auto", "minWidth": "100%",
+            "height": "520px", "overflowY": "auto",
+            "tableLayout": "fixed",
+        },
         style_header=_HEADER_STYLE,
-        style_cell={**_pivot_cell, "minWidth": "60px"},
+        style_cell={**_pivot_cell, "width": "80px", "minWidth": "80px", "maxWidth": "80px"},
         style_data={"backgroundColor": "#0f172a"},
         style_cell_conditional=[
-            {"if": {"column_id": idx_col}, "color": "#94a3b8", "fontSize": "11px", "minWidth": "80px"}
+            {"if": {"column_id": idx_col},
+             "color": "#94a3b8", "fontSize": "11px",
+             "width": "100px", "minWidth": "100px", "maxWidth": "100px"},
         ],
         style_data_conditional=styles,
         fixed_rows={"headers": True},
