@@ -220,7 +220,7 @@ def build_progression_data(df: pd.DataFrame, nation: str) -> pd.DataFrame:
                     should_skip = True
                     reason = (
                         f"Эффективнее прокачивать ветку на «{best_name}» "
-                        f"(RP {best_eff:.0f} vs {loc_s:.0f})"
+                        f"(LS {best_eff:.0f} vs {loc_s:.0f})"
                     )
                     alt_name = best_name
 
@@ -297,6 +297,48 @@ def build_progression_data(df: pd.DataFrame, nation: str) -> pd.DataFrame:
     if "Cross_Alt" not in std_df.columns:
         std_df["Cross_Alt"]  = ""
         std_df["Cross_Hint"] = ""
+
+    std_df["Forward_Hint"] = ""
+
+
+    _FORWARD_THRESHOLD = 1.35   # на 35% лучше — стоит упомянуть
+
+    if "META_SCORE" in std_df.columns:
+        for branch, grp in std_df.groupby("_branch"):
+            srt = grp.sort_values("BR")
+
+            for pos, (row_idx, row) in enumerate(srt.iterrows()):
+                if std_df.at[row_idx, "Verdict"] not in (VERDICT_PASS,):
+                    continue
+
+                our_meta = float(row.get("META_SCORE", 0) or 0)
+                if our_meta < 1e-3:
+                    continue
+
+                # Смотрим только на технику ВПЕРЕДИ (выше по BR)
+                ahead = srt.iloc[pos + 1:]
+                if ahead.empty:
+                    continue
+
+                best_meta = 0.0
+                best_name = ""
+                best_br   = 0.0
+
+                for _, ahead_row in ahead.iterrows():
+                    a_idx  = ahead_row.name
+                    a_meta = float(ahead_row.get("META_SCORE", 0) or 0)
+                    if std_df.at[a_idx, "Verdict"] == VERDICT_SKIP:
+                        continue
+                    if a_meta > best_meta:
+                        best_meta = a_meta
+                        best_name = str(ahead_row["Name"])
+                        best_br   = float(ahead_row["BR"])
+
+                if best_meta > our_meta * _FORWARD_THRESHOLD:
+                    std_df.at[row_idx, "Forward_Hint"] = (
+                        f"Терпи — впереди «{best_name}» ({best_br:.1f}) "
+                        f"намного сильнее"
+                    )
 
     # «Болезненные» ранги — нет ни одного MUST среди стандарта
     era_has_must = std_df.groupby("_era_int")["Verdict"].apply(

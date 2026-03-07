@@ -66,9 +66,12 @@ def _vehicle_card(row: dict, card_id: str) -> html.Div:
     pain_fix   = bool(row.get("Prem_Pain_Fix", False))
 
     br_color = {
-        "Premium": "#fbbf24", "Pack": "#60a5fa",
-        "Squadron": "#34d399", "Marketplace": "#a78bfa",
-        "Gift": "#f472b6",
+        "Premium":     "#fbbf24",
+        "Pack":        "#60a5fa",
+        "Squadron":    "#34d399",
+        "Marketplace": "#a78bfa",
+        "Gift":        "#f472b6",
+        "Event":       "#fb923c",
     }.get(vclass, "#64748b")
 
     border_color = c["border"]
@@ -107,12 +110,28 @@ def _vehicle_card(row: dict, card_id: str) -> html.Div:
     stats_row = html.Div([
         _stat_chip("WR", f"{wr:.1f}%"),
         _stat_chip("K/D", f"{kd:.1f}"),
-        _stat_chip("LS", f"{loc_s:.0f}"),
+        _stat_chip("META", f"{loc_s:.0f}"),
     ], style={"display": "flex", "gap": "8px"})
 
-    cross_hint = str(row.get("Cross_Hint", "") or "")
+    cross_hint   = str(row.get("Cross_Hint",   "") or "")
+    forward_hint = str(row.get("Forward_Hint", "") or "")
 
     children = [header_row, stats_row]
+
+    # ── Взгляд вперёд: сильная машина впереди в ветке ────────────────────────
+    if forward_hint:
+        children.append(html.Div(
+            forward_hint,
+            style={
+                "fontSize": "9px",
+                "fontWeight": "normal",
+                "color": "#86efac",        # зеленоватый — «впереди хорошее»
+                "marginTop": "5px",
+                "paddingTop": "5px",
+                "borderTop": "1px solid rgba(134,239,172,0.20)",
+                "lineHeight": "1.4",
+            },
+        ))
 
     # ── Кросс-хинт: лучшая техника из соседней ветки ─────────────────────────
     if cross_hint:
@@ -343,7 +362,6 @@ def _render_cell_cards(cell_df: "pd.DataFrame", prefix: str, counter: list) -> l
         seen_groups_added: set = set()
 
         # Перебираем заново, чтобы сохранить позицию группы
-        temp_counter_offset = counter[0] - len(cell_df)
         for row_pos, (_, r) in enumerate(cell_df.iterrows()):
             g = str(r.get("vdb_shop_group", "") or "").strip()
             if g:
@@ -398,7 +416,12 @@ def _build_unified_grid(
     _UNPLACED_COL = -1
     if has_shop:
         shop_col_num = pd.to_numeric(std_df["vdb_shop_column"], errors="coerce").fillna(-1)
-        valid_cols   = sorted(shop_col_num[shop_col_num >= 0].unique().astype(int))
+        raw_cols     = sorted(shop_col_num[shop_col_num >= 0].unique().astype(int))
+        col_remap    = {old: new for new, old in enumerate(raw_cols)}
+        shop_col_num = shop_col_num.map(lambda x: col_remap.get(int(x), -1) if x >= 0 else -1)
+        std_df       = std_df.copy()
+        std_df["_shop_col_norm"] = shop_col_num
+        valid_cols   = list(range(len(raw_cols)))
         has_unplaced = (shop_col_num < 0).any()
         types_in_df  = []
     elif not std_df.empty:
@@ -465,7 +488,8 @@ def _build_unified_grid(
                 continue
 
             if has_shop:
-                col_num = pd.to_numeric(era_df["vdb_shop_column"], errors="coerce").fillna(-1).astype(int)
+                col_src = "_shop_col_norm" if "_shop_col_norm" in era_df.columns else "vdb_shop_column"
+                col_num = pd.to_numeric(era_df[col_src], errors="coerce").fillna(-1).astype(int)
                 cell_df = era_df[col_num < 0].copy() if col == _UNPLACED_COL else era_df[col_num == col].copy()
                 if not cell_df.empty and "vdb_shop_row" in cell_df.columns:
                     row_order = pd.to_numeric(cell_df["vdb_shop_row"], errors="coerce").fillna(99999)
