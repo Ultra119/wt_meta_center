@@ -2,15 +2,29 @@ import pandas as pd
 import numpy as np
 
 RANK_PENALTY: dict[int, float] = {
-    -4: 0.10,
-    -3: 0.20,
+    -4: 0.05,
+    -3: 0.10,
     -2: 0.30,
     -1: 0.90,
+
      0: 1.00,
-     1: 1.00,
-     2: 0.40,
-     3: 0.30,
-     4: 0.10,
+    +1: 1.00,
+
+    +2: 0.40,
+    +3: 0.30,
+    +4: 0.20,
+}
+
+RANK_PENALTY_PREMIUM: dict[int, float] = {
+    -4: 1.00,
+    -3: 1.00,
+    -2: 1.00,
+    -1: 1.00,
+     0: 1.00,
+    +1: 1.00,
+    +2: 0.40,
+    +3: 0.30,
+    +4: 0.20,
 }
 
 ROMAN: dict[int, str] = {
@@ -52,9 +66,15 @@ def _local_score(branch_df: pd.DataFrame) -> pd.Series:
     return (0.55 * wr + 0.45 * kd).clip(0, 100)
 
 
-def _rank_penalty(researcher_era: int, target_era: int) -> float:
+def _rank_penalty(researcher_era: int, target_era: int, is_premium: bool = False) -> float:
     diff = target_era - researcher_era
-    return RANK_PENALTY.get(diff, 0.10)
+    if is_premium:
+        if diff <= 1:
+            return RANK_PENALTY_PREMIUM.get(diff, 1.00)
+        return RANK_PENALTY_PREMIUM.get(diff, 0.20)
+    if diff < 0:
+        return RANK_PENALTY.get(diff, 0.05)
+    return RANK_PENALTY.get(diff, 0.20)
 
 def build_progression_data(df: pd.DataFrame, nation: str) -> pd.DataFrame:
     if df.empty:
@@ -90,7 +110,7 @@ def build_progression_data(df: pd.DataFrame, nation: str) -> pd.DataFrame:
 
     # ── Проход 2: вердикты с анализом скипа ──────────────────────────────
     for branch, grp in out.groupby("_branch"):
-        srt = grp.sort_values("BR")           # цепочка: от слабого к сильному
+        srt = grp.sort_values("BR")
         p60 = srt["Local_Score"].quantile(0.60)
 
         for pos, (row_idx, row) in enumerate(srt.iterrows()):
@@ -103,32 +123,39 @@ def build_progression_data(df: pd.DataFrame, nation: str) -> pd.DataFrame:
                 out.at[row_idx, "Verdict"] = VERDICT_PREM
                 continue
 
-            prev_std = srt.iloc[:pos]
-            prev_std = prev_std[
-                ~prev_std["VehicleClass"].isin(["Premium", "Pack", "Squadron", "Marketplace"])
-            ]
+            prev_all = srt.iloc[:pos]
 
             should_skip = False
             reason      = ""
             alt_name    = ""
 
-            if not prev_std.empty:
-                best_prev  = prev_std.loc[prev_std["Local_Score"].idxmax()]
-                bp_score   = float(best_prev["Local_Score"])
-                bp_era     = int(best_prev["_era_int"])
-                bp_name    = str(best_prev["Name"])
+            if not prev_all.empty:
+                best_eff   = 0.0
+                best_name  = ""
+                best_penalty_pct = 0.0
 
-                penalty    = _rank_penalty(bp_era, era)
-                eff_score  = bp_score * penalty
+                for _, prev_row in prev_all.iterrows():
+                    prev_vclass   = str(prev_row.get("VehicleClass", "Standard"))
+                    prev_is_prem  = prev_vclass in ("Premium", "Pack", "Squadron", "Marketplace")
+                    prev_era      = int(prev_row["_era_int"])
+                    prev_score    = float(prev_row["Local_Score"])
 
-                if eff_score > loc_s * 1.05:
+                    pen = _rank_penalty(prev_era, era, is_premium=prev_is_prem)
+                    eff = prev_score * pen
+
+                    if eff > best_eff:
+                        best_eff          = eff
+                        best_name         = str(prev_row["Name"])
+                        best_penalty_pct  = pen * 100.0
+
+                if best_eff > loc_s * 1.05:
                     should_skip = True
                     reason = (
-                        f"Скип. Выгоднее исследовать на «{bp_name}» "
-                        f"(эфф.RP {eff_score:.0f} vs {loc_s:.0f}). "
-                        f"Штраф ранга: {penalty * 100:.0f}%."
+                        f"Скип. Выгоднее исследовать на «{best_name}» "
+                        f"(эфф.RP {best_eff:.0f} vs {loc_s:.0f}). "
+                        f"Коэф. ОИ: {best_penalty_pct:.0f}%."
                     )
-                    alt_name = bp_name
+                    alt_name = best_name
 
             if should_skip:
                 out.at[row_idx, "Verdict"]     = VERDICT_SKIP
