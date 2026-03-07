@@ -118,6 +118,7 @@ def _vehicle_card(row: dict, card_id: str) -> html.Div:
             reason,
             style={
                 "fontSize": "9px",
+                "fontWeight": "normal",
                 "color": "#fecaca",
                 "marginTop": "5px",
                 "paddingTop": "5px",

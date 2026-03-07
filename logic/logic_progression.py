@@ -184,9 +184,8 @@ def build_progression_data(df: pd.DataFrame, nation: str) -> pd.DataFrame:
                 if best_eff > loc_s * 1.05:
                     should_skip = True
                     reason = (
-                        f"Скип. Выгоднее исследовать на «{best_name}» "
-                        f"(эфф.RP {best_eff:.0f} vs {loc_s:.0f}). "
-                        f"Коэф. ОИ: {best_penalty_pct:.0f}%."
+                        f"Эффективнее прокачивать ветку на «{best_name}» "
+                        f"(RP {best_eff:.0f} vs {loc_s:.0f})"
                     )
                     alt_name = best_name
 
