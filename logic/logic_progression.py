@@ -270,6 +270,7 @@ def build_progression_data(df: pd.DataFrame, nation: str) -> pd.DataFrame:
                 (std_df["_super_cat"] == our_cat) &
                 (std_df["BR"] >= our_br - _CROSS_BR_WINDOW) &
                 (std_df["BR"] <= our_br + _CROSS_BR_WINDOW) &
+                (std_df["BR"]         != our_br) &
                 (std_df["Verdict"] != VERDICT_SKIP)
             )
             for alt_idx, alt_row in std_df[mask].iterrows():
