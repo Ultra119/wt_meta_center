@@ -28,8 +28,8 @@ _BRANCH_TYPES: dict[str, list[str]] = {
     ],
 }
 
-# Gift всегда идёт в "Особую" колонку наравне с Premium/Pack/Squadron
-_PREM_CLASSES = {"Premium", "Pack", "Squadron", "Marketplace", "Gift"}
+# Все не-Standard классы → колонка «ОСОБАЯ»
+_STD_CLASS = "Standard"
 
 
 def _verdict_badge(verdict: str) -> html.Span:
@@ -244,6 +244,7 @@ def _group_bracket(cards: list, group_name: str = "", first_vehicle_name: str = 
             },
         )]
 
+    # Карточки без нижнего отступа у последней — скоб "склеивает" их
     styled_cards = []
     for i, card in enumerate(cards):
         is_last = i == len(cards) - 1
@@ -294,6 +295,7 @@ def _group_bracket(cards: list, group_name: str = "", first_vehicle_name: str = 
 
 
 def _render_cell_cards(cell_df: "pd.DataFrame", prefix: str, counter: list) -> list:
+    """Рендерит карточки ячейки, группируя технику из одной папки (vdb_shop_group)."""
     import pandas as pd
 
     result = []
@@ -323,6 +325,7 @@ def _render_cell_cards(cell_df: "pd.DataFrame", prefix: str, counter: list) -> l
         ordered: list = []
         seen_groups_added: set = set()
 
+        # Перебираем заново, чтобы сохранить позицию группы
         temp_counter_offset = counter[0] - len(cell_df)
         for row_pos, (_, r) in enumerate(cell_df.iterrows()):
             g = str(r.get("vdb_shop_group", "") or "").strip()
@@ -349,18 +352,20 @@ def _render_cell_cards(cell_df: "pd.DataFrame", prefix: str, counter: list) -> l
     return result
 
 
-def _build_unified_grid(std_df: "pd.DataFrame", prem_df: "pd.DataFrame") -> html.Div:
+
+def _build_unified_grid(
+    std_df:  "pd.DataFrame",
+    prem_df: "pd.DataFrame",
+) -> html.Div:
     import pandas as pd
 
     if std_df.empty and prem_df.empty:
         return dbc.Alert("Нет данных для выбранной нации.", color="info")
 
-    # Все эры из обоих датасетов
     all_era_sets = []
-    if not std_df.empty:
-        all_era_sets += [e for e in std_df["_era_int"].unique() if 1 <= e <= 8]
-    if not prem_df.empty:
-        all_era_sets += [e for e in prem_df["_era_int"].unique() if 1 <= e <= 8]
+    for _df in (std_df, prem_df):
+        if not _df.empty:
+            all_era_sets += [e for e in _df["_era_int"].unique() if 1 <= e <= 8]
     eras = sorted(set(all_era_sets))
 
     if not eras:
@@ -392,7 +397,7 @@ def _build_unified_grid(std_df: "pd.DataFrame", prem_df: "pd.DataFrame") -> html
     n_data_cols  = len(all_std_cols)
     counter      = [0]
 
-    # ── Заголовок: РАНГ + пустые ячейки std + «ОСОБАЯ» ───────────────────────
+    # ── Заголовок: РАНГ + пустые ячейки std + «ОСОБАЯ» ──────────────────────
     cells: list = [
         html.Div(
             "РАНГ",
@@ -410,24 +415,21 @@ def _build_unified_grid(std_df: "pd.DataFrame", prem_df: "pd.DataFrame") -> html
         label = "?" if col == _UNPLACED_COL and has_shop else ""
         cells.append(html.Div(label, style={"backgroundColor": "transparent", "minHeight": "4px"}))
 
-    # Заголовок «ОСОБАЯ»
-    cells.append(
-        html.Div(
-            "👑 ОСОБАЯ",
-            style={
-                "backgroundColor": "#1e293b",
-                "borderRadius": "4px",
-                "padding": "6px 4px",
-                "textAlign": "center",
-                "fontSize": "9px", "fontWeight": "700",
-                "color": "#a78bfa",
-                "letterSpacing": "0.1em",
-                "minHeight": "52px",
-                "display": "flex", "alignItems": "center",
-                "justifyContent": "center",
-            },
-        )
-    )
+    cells.append(html.Div(
+        "👑 ОСОБАЯ",
+        style={
+            "backgroundColor": "#1e293b",
+            "borderRadius": "4px",
+            "padding": "6px 4px",
+            "textAlign": "center",
+            "fontSize": "9px", "fontWeight": "700",
+            "color": "#a78bfa",
+            "letterSpacing": "0.1em",
+            "minHeight": "52px",
+            "display": "flex", "alignItems": "center",
+            "justifyContent": "center",
+        },
+    ))
 
     # ── Строки: одна на ранг ──────────────────────────────────────────────────
     for era in eras:
@@ -464,7 +466,7 @@ def _build_unified_grid(std_df: "pd.DataFrame", prem_df: "pd.DataFrame") -> html
             cards = _render_cell_cards(cell_df, "pgc", counter)
             cells.append(html.Div(cards, style={"padding": "3px"}))
 
-        # Ячейка «ОСОБАЯ» для этого ранга (без Roman numeral — он слева)
+        # ── Ячейка «ОСОБАЯ» ──────────────────────────────────────────────────
         if not prem_df.empty:
             pera_df = prem_df[prem_df["_era_int"] == era].copy()
             if not pera_df.empty:
@@ -483,7 +485,7 @@ def _build_unified_grid(std_df: "pd.DataFrame", prem_df: "pd.DataFrame") -> html
         else:
             cells.append(_empty_cell())
 
-    # ── CSS grid: 52px ранг | std колонки (1fr каждая) | 180px особая ─────────
+    # ── CSS grid: 52px ранг | std (1fr каждая) | 180px особая ───────────────
     grid_cols = f"52px repeat({n_data_cols}, 1fr) 180px"
 
     return html.Div(
@@ -549,14 +551,14 @@ def register(app, core, all_nations, all_types, tf_data) -> None:
 
         prog_df = prog_df[prog_df["_branch"].isin(present)]
 
-        _is_prem = prog_df["VehicleClass"].isin(_PREM_CLASSES)
-        std_df   = prog_df[~_is_prem]
-        prem_df  = prog_df[_is_prem]
+        _is_std  = prog_df["VehicleClass"] == _STD_CLASS
+        std_df   = prog_df[_is_std]
+        prem_df  = prog_df[~_is_std]
 
-        n_must = int((prog_df["Verdict"] == VERDICT_MUST).sum())
-        n_skip = int((prog_df["Verdict"] == VERDICT_SKIP).sum())
-        n_prem = int((prog_df["Verdict"] == VERDICT_PREM).sum())
-        total  = len(prog_df)
+        n_must  = int((prog_df["Verdict"] == VERDICT_MUST).sum())
+        n_skip  = int((prog_df["Verdict"] == VERDICT_SKIP).sum())
+        n_prem  = int((prog_df["Verdict"] == VERDICT_PREM).sum())
+        total   = len(prog_df)
 
         flag = _NATION_FLAG.get(nation.lower(), "🏴")
         info = html.Span([
@@ -567,7 +569,7 @@ def register(app, core, all_nations, all_types, tf_data) -> None:
             html.Span(f"👑 {n_prem} Prem",   style={"color": "#a78bfa"}),
         ], style={"fontSize": "0.75rem", "color": "#94a3b8"})
 
-        # Единая сетка: std + premium в одном CSS grid
+        # Единая сетка: std + premium + event в одном CSS grid
         grid = _build_unified_grid(std_df, prem_df)
 
         return grid, info

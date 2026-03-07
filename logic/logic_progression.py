@@ -35,7 +35,7 @@ VERDICT_PASS = "PASS"
 VERDICT_SKIP = "SKIP"
 VERDICT_PREM = "PREM"
 
-_PREM_CLASSES = {"Premium", "Pack", "Squadron", "Marketplace", "Gift"}
+_STD_CLASS   = "Standard"
 
 
 def _shop_sort_key(df: pd.DataFrame) -> pd.Series:
@@ -135,7 +135,7 @@ def build_progression_data(df: pd.DataFrame, nation: str) -> pd.DataFrame:
     out["Prem_Boost"]    = 0.0    # только для премиума: ×N vs лучшей бесплатной
     out["Prem_Pain_Fix"] = False  # True если ранг «болезненный» по стандарту
 
-    is_prem = out["VehicleClass"].isin(_PREM_CLASSES)
+    is_prem = out["VehicleClass"] != _STD_CLASS
     std_df  = out[~is_prem].copy()
     prem_df = out[is_prem].copy()
 

@@ -14,10 +14,12 @@ _DOWNLOAD_TIMEOUT: int = 30
 _META_KEYS = frozenset({
     "image", "reqAir", "futureReqAir", "slaveUnit",
     "marketplaceItemdefId", "isClanVehicle",
-    "reqFeature", "showOnlyWhenBought", "showByPlatform",
+    "reqFeature", "showByPlatform",
     "beginPurchaseDate", "endPurchaseDate",
     "isCrossPromo", "crossPromoBanner", "hideFeature", "event",
 })
+
+_VAL_FLAGS = frozenset({"showOnlyWhenBought"})
 
 
 def _try_download(dest: str) -> None:
@@ -44,19 +46,25 @@ def _iter_column(col_dict: dict):
         if key in _META_KEYS or not isinstance(val, dict):
             continue
 
+        if val.get("isClanVehicle", False):
+            continue
+
+        is_event = bool(val.get("showOnlyWhenBought", False))
+
         nested = [
             (k, v) for k, v in val.items()
-            if k not in _META_KEYS and isinstance(v, dict) and "rank" in v
+            if k not in _META_KEYS and k not in _VAL_FLAGS and isinstance(v, dict) and "rank" in v
         ]
 
         if nested:
             for sub_key, sub_val in nested:
-                is_gift = bool(sub_val.get("gift", ""))
-                yield sub_key, int(sub_val.get("rank", 0) or 0), key, row, is_gift
+                is_gift      = bool(sub_val.get("gift", ""))
+                sub_is_event = is_event or bool(sub_val.get("showOnlyWhenBought", False))
+                yield sub_key, int(sub_val.get("rank", 0) or 0), key, row, is_gift, sub_is_event
                 row += 1
         elif "rank" in val:
             is_gift = bool(val.get("gift", ""))
-            yield key, int(val.get("rank", 0) or 0), "", row, is_gift
+            yield key, int(val.get("rank", 0) or 0), "", row, is_gift, is_event
             row += 1
 
 
@@ -92,15 +100,17 @@ def parse_shop_file(path: str) -> dict[str, dict]:
             for col_idx, col_dict in enumerate(columns):
                 if not isinstance(col_dict, dict):
                     continue
-                for vid, rank, group, row_idx, is_gift in _iter_column(col_dict):
+                for vid, rank, group, row_idx, is_gift, is_event in _iter_column(col_dict):
                     result[vid] = {
-                        "shop_column": col_idx,
-                        "shop_row":    row_idx,
-                        "shop_rank":   rank,
-                        "shop_group":  group,
-                        "shop_nation": nation,
-                        "shop_branch": branch,
-                        "shop_order":  col_idx * 10000 + row_idx,
+                        "shop_column":   col_idx,
+                        "shop_row":      row_idx,
+                        "shop_rank":     rank,
+                        "shop_group":    group,
+                        "shop_nation":   nation,
+                        "shop_branch":   branch,
+                        "shop_order":    col_idx * 10000 + row_idx,
+                        "shop_is_gift":  is_gift,
+                        "shop_is_event": is_event,
                     }
 
     print(f"[ShopParser] ✅ Распарсено {len(result)} позиций из shop.blkx")
