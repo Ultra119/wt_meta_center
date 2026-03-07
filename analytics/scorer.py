@@ -5,110 +5,136 @@ from analytics.constants import ROLE_WEIGHTS
 
 
 _MODE_PRIORITY: list[str] = ["Realistic", "Simulator", "Arcade"]
+_C_CONF = 500.0
 
 
 def aggregate_modes(x: pd.DataFrame) -> pd.Series:
     if len(x) == 1:
         return x.iloc[0].copy()
 
-    total_battles = x["Сыграно игр"].sum()
-
     if "Mode" in x.columns:
         for preferred in _MODE_PRIORITY:
             subset = x[x["Mode"] == preferred]
             if not subset.empty:
                 res = subset.iloc[0].copy()
-                res["Сыграно игр"] = total_battles
                 res["Mode"] = "Mixed"
                 return res
 
     res = x.iloc[0].copy()
-    res["Сыграно игр"] = total_battles
     res["Mode"] = "Mixed"
     return res
+
+def _wilson_lower(wr_pct: pd.Series, n_games: pd.Series, z: float) -> pd.Series:
+    p  = (wr_pct / 100.0).clip(0.0, 1.0)
+    n  = n_games.clip(lower=1.0)
+    z2 = z ** 2
+
+    denom  = 1.0 + z2 / n
+    center = (p + z2 / (2.0 * n)) / denom
+    margin = (z * np.sqrt(p * (1.0 - p) / n + z2 / (4.0 * n ** 2))) / denom
+
+    return (center - margin).clip(0.0, 1.0)
+
+
+def _weighted_avg(values: pd.Series, weights: pd.Series) -> float:
+    w = weights.clip(lower=0)
+    total = w.sum()
+    if total < 1e-9:
+        return float(values.mean())
+    return float((values * w).sum() / total)
 
 def score(df: pd.DataFrame, settings: dict) -> pd.DataFrame:
     df = df.copy()
 
-    mm_window = float(settings.get("mm_window", 1.0))
-    sig_scale = float(settings.get("sigmoid_scale", 1.5))
-    z_clip    = float(settings.get("z_clip", 3.0))
-
-    spawns = df["Возрождения"].clip(lower=1)
-    df["_ks_g_raw"] = df["Наземные убийства"]  / spawns
-    df["_ks_a_raw"] = df["Воздушные убийства"] / spawns
-    df["_ks_n_raw"] = df["Морские убийства"]   / spawns
-    df["_kd_raw"]   = df["KD"]
-    df["_wr_raw"]   = df["WR"] / 100.0
-    df["_surv_raw"] = (1.0 - (df["Смерти"] / spawns)).clip(0.0, 1.0)
-
-    unique_brs  = df["BR"].unique()
-    metric_keys = ["_wr", "_kd", "_ks_g", "_ks_a", "_ks_n", "_surv"]
-
-    for k in metric_keys:
-        df[k]          = 0.0
-        df[f"z{k}"]    = 0.0
+    mm_window = float(settings.get("mm_window",      1.0))
+    sig_scale = float(settings.get("sigmoid_scale",  1.5))
+    z_clip    = float(settings.get("z_clip",          3.0))
+    wilson_z  = float(settings.get("wilson_z",       1.96))
 
     C_battles = 200.0
     C_spawns  = 300.0
 
+    spawns = df["Возрождения"].clip(lower=1)
+
+    df["_ks_g_raw"] = df["Наземные убийства"]  / spawns
+    df["_ks_a_raw"] = df["Воздушные убийства"] / spawns
+    df["_ks_n_raw"] = df["Морские убийства"]   / spawns
+    df["_kd_raw"]   = df["KD"]
+    df["_surv_raw"] = (1.0 - (df["Смерти"] / spawns)).clip(0.0, 1.0)
+
+    df["_wr_raw"] = _wilson_lower(df["WR"], df["Сыграно игр"], wilson_z)
+
+    metric_keys = ["_wr", "_kd", "_ks_g", "_ks_a", "_ks_n", "_surv"]
+    unique_brs  = df["BR"].unique()
+
+    for k in metric_keys:
+        df[k] = 0.0
+
     for br in unique_brs:
         mask_peer = (df["BR"] >= br - mm_window) & (df["BR"] <= br + mm_window)
         peers     = df.loc[mask_peer]
-
         if peers.empty:
             continue
 
-        total_games   = max(peers["Сыграно игр"].sum(), 1)
-        total_spawns  = max(peers["Возрождения"].sum(),  1)
+        total_games  = max(peers["Сыграно игр"].sum(), 1)
+        total_spawns = max(peers["Возрождения"].sum(),  1)
 
-        avg_wr   = (peers["WR"]  * peers["Сыграно игр"]).sum() / total_games / 100.0
-        avg_kd   = (peers["KD"]  * peers["Сыграно игр"]).sum() / total_games
-        avg_ks_g = (peers["_ks_g_raw"] * peers["Возрождения"]).sum() / total_spawns
-        avg_ks_a = (peers["_ks_a_raw"] * peers["Возрождения"]).sum() / total_spawns
+        avg_wr   = _weighted_avg(peers["_wr_raw"],   peers["Сыграно игр"])
+        avg_kd   = _weighted_avg(peers["_kd_raw"],   peers["Сыграно игр"])
+        avg_ks_g = _weighted_avg(peers["_ks_g_raw"], peers["Возрождения"])
+        avg_ks_a = _weighted_avg(peers["_ks_a_raw"], peers["Возрождения"])
+        avg_ks_n = _weighted_avg(peers["_ks_n_raw"], peers["Возрождения"])
+        avg_surv = _weighted_avg(peers["_surv_raw"],  peers["Возрождения"])
 
         mask_self = df["BR"] == br
         row_slice = df.loc[mask_self]
-        n_games   = row_slice["Сыграно игр"]
-        n_spawns  = row_slice["Возрождения"]
+        n_g = row_slice["Сыграно игр"]
+        n_s = row_slice["Возрождения"]
 
         df.loc[mask_self, "_wr"] = (
-            (row_slice["_wr_raw"] * n_games + avg_wr * C_battles)
-            / (n_games + C_battles)
+            (row_slice["_wr_raw"] * n_g + avg_wr * C_battles)
+            / (n_g + C_battles)
         ) * 100.0
 
         df.loc[mask_self, "_kd"] = (
-            (row_slice["_kd_raw"] * n_games + avg_kd * C_battles)
-            / (n_games + C_battles)
+            (row_slice["_kd_raw"] * n_g + avg_kd * C_battles)
+            / (n_g + C_battles)
         )
 
         df.loc[mask_self, "_ks_g"] = (
-            (row_slice["_ks_g_raw"] * n_spawns + avg_ks_g * C_spawns)
-            / (n_spawns + C_spawns)
+            (row_slice["_ks_g_raw"] * n_s + avg_ks_g * C_spawns)
+            / (n_s + C_spawns)
         )
         df.loc[mask_self, "_ks_a"] = (
-            (row_slice["_ks_a_raw"] * n_spawns + avg_ks_a * C_spawns)
-            / (n_spawns + C_spawns)
+            (row_slice["_ks_a_raw"] * n_s + avg_ks_a * C_spawns)
+            / (n_s + C_spawns)
         )
 
-        df.loc[mask_self, "_ks_n"] = row_slice["_ks_n_raw"]
-        df.loc[mask_self, "_surv"] = row_slice["_surv_raw"]
+        df.loc[mask_self, "_ks_n"] = (
+            (row_slice["_ks_n_raw"] * n_s + avg_ks_n * C_spawns)
+            / (n_s + C_spawns)
+        )
+        df.loc[mask_self, "_surv"] = (
+            (row_slice["_surv_raw"] * n_s + avg_surv * C_spawns)
+            / (n_s + C_spawns)
+        )
+
+    for k in metric_keys:
+        df[f"z{k}"] = 0.0
+
+    for br in unique_brs:
+        mask_peer = (df["BR"] >= br - mm_window) & (df["BR"] <= br + mm_window)
+        mask_self = df["BR"] == br
+        peers     = df.loc[mask_peer]
 
         for m_col in metric_keys:
-            z_col   = f"z{m_col}"
-            raw_col = m_col + "_raw"   # "_wr_raw", "_ks_n_raw", "_surv_raw", …
-
-            if raw_col in peers.columns:
-                p_vals = peers[raw_col] * (100.0 if m_col == "_wr" else 1.0)
-            else:
-                p_vals = peers[m_col]
-
-            mu    = p_vals.mean()
-            sigma = p_vals.std()
+            p_vals = peers[m_col]
+            mu     = p_vals.mean()
+            sigma  = p_vals.std()
             if pd.isna(sigma) or sigma < 1e-9:
                 sigma = 1.0
 
-            df.loc[mask_self, z_col] = (
+            df.loc[mask_self, f"z{m_col}"] = (
                 (df.loc[mask_self, m_col] - mu) / sigma
             ).clip(-z_clip, z_clip)
 
@@ -131,13 +157,10 @@ def score(df: pd.DataFrame, settings: dict) -> pd.DataFrame:
         if vtype == "spaa" and row["_ks_g"] > row["_ks_a"] * 1.5:
             weights = ROLE_WEIGHTS["tank_destroyer"].copy()
 
-        if vtype == "light_tank" and row["_kd"] > 2.0 and row["_wr"] < 50:
-            weights["wr"] *= 0.7
-            weights["kd"] *= 1.3
-
         w_sum = sum(weights.values())
-        for k in weights:
-            weights[k] /= w_sum
+        if w_sum > 1e-9:
+            for k in weights:
+                weights[k] /= w_sum
 
         base_score = (
             weights.get("wr",   0) * s_wr[idx]   +
@@ -148,20 +171,16 @@ def score(df: pd.DataFrame, settings: dict) -> pd.DataFrame:
             weights.get("surv", 0) * s_surv[idx]
         )
 
-        diff              = abs(s_wr[idx] - s_kd[idx])
-        consistency_factor = 1.0 - (diff / 200.0)
-        final_score        = base_score * consistency_factor
-
-        battles = row["Сыграно игр"]
-        if battles > 100:
-            final_score += np.log10(battles) * 0.5
+        battles    = float(row["Сыграно игр"])
+        confidence = battles / (battles + _C_CONF)
+        final_score = 50.0 + (base_score - 50.0) * confidence
 
         df.at[idx, "META_SCORE"] = final_score
 
     df["META_SCORE"] = df["META_SCORE"].clip(0.0, 100.0)
 
     if "vdb_repair_cost_realistic" in df.columns:
-        repair = df["vdb_repair_cost_realistic"].fillna(0).astype(float)
+        repair  = df["vdb_repair_cost_realistic"].fillna(0).astype(float)
         has_vdb = df.get("vdb_match_score", pd.Series(0.0, index=df.index)) > 0
         net_sl  = df["SL за игру"].where(~has_vdb, df["SL за игру"] - repair)
     else:
@@ -169,7 +188,7 @@ def score(df: pd.DataFrame, settings: dict) -> pd.DataFrame:
 
     df["_sl_eff"] = net_sl.clip(lower=0) * (df["_wr"] / 50.0).clip(lower=0.5)
     df["Net SL за игру"] = net_sl.round(0).astype(int)
-    df["_z_sl"]   = 0.0
+    df["_z_sl"] = 0.0
 
     for br in unique_brs:
         mask_peer = (df["BR"] >= br - mm_window) & (df["BR"] <= br + mm_window)
@@ -185,7 +204,10 @@ def score(df: pd.DataFrame, settings: dict) -> pd.DataFrame:
         100.0 / (1.0 + np.exp(-sig_scale * df["_z_sl"]))
     ).clip(0, 100)
 
-    drop_cols = [c for c in df.columns if (c.startswith("_") or c.startswith("z_")) and c != "Net SL за игру"]
+    drop_cols = [
+        c for c in df.columns
+        if (c.startswith("_") or c.startswith("z_")) and c != "Net SL за игру"
+    ]
     df.drop(columns=drop_cols, inplace=True, errors="ignore")
 
     return df
