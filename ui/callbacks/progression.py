@@ -40,16 +40,18 @@ def _verdict_badge(verdict: str) -> html.Span:
 
 
 def _vehicle_card(row: dict, card_id: str) -> html.Div:
-    verdict  = row.get("Verdict", VERDICT_PASS)
-    c        = _VC.get(verdict, _VC[VERDICT_PASS])
-    name     = str(row.get("Name", ""))
-    br       = float(row.get("BR", 0))
-    wr       = float(row.get("WR", 0))
-    kd       = float(row.get("KD", 0))
-    loc_s    = float(row.get("Local_Score", 0))
-    reason   = str(row.get("Skip_Reason", ""))
-    vclass   = str(row.get("VehicleClass", "Standard"))
-    prefix   = CLASS_PREFIX.get(vclass, "")
+    verdict    = row.get("Verdict", VERDICT_PASS)
+    c          = _VC.get(verdict, _VC[VERDICT_PASS])
+    name       = str(row.get("Name", ""))
+    br         = float(row.get("BR", 0))
+    wr         = float(row.get("WR", 0))
+    kd         = float(row.get("KD", 0))
+    loc_s      = float(row.get("Local_Score", 0))
+    reason     = str(row.get("Skip_Reason", ""))
+    vclass     = str(row.get("VehicleClass", "Standard"))
+    prefix     = CLASS_PREFIX.get(vclass, "")
+    prem_boost = float(row.get("Prem_Boost", 0) or 0)
+    pain_fix   = bool(row.get("Prem_Pain_Fix", False))
 
     br_color = {
         "Premium": "#fbbf24", "Pack": "#60a5fa",
@@ -97,10 +99,41 @@ def _vehicle_card(row: dict, card_id: str) -> html.Div:
         ))
 
     if verdict == VERDICT_PREM:
-        children.append(html.Div(
-            "👑 Поможет обойти боль ранга",
-            style={"fontSize": "9px", "color": "#c4b5fd", "marginTop": "3px"},
-        ))
+        prem_lines = []
+
+        if pain_fix:
+            prem_lines.append(html.Div(
+                "👑 Поможет обойти боль ранга",
+                style={"fontSize": "9px", "color": "#c4b5fd", "marginTop": "3px"},
+            ))
+
+        if prem_boost > 0:
+            if prem_boost >= 1.05:
+                boost_color = "#34d399"
+                boost_label = f"⚡ Грайнд ×{prem_boost:.1f} быстрее бесплатного"
+            elif prem_boost >= 0.95:
+                boost_color = "#94a3b8"
+                boost_label = f"≈ Паритет с бесплатным (×{prem_boost:.1f})"
+            else:
+                boost_color = "#f87171"
+                boost_label = f"↓ Слабее бесплатного (×{prem_boost:.1f})"
+
+            prem_lines.append(html.Div(
+                boost_label,
+                style={
+                    "fontSize": "9px", "color": boost_color,
+                    "marginTop": "2px", "fontWeight": "600",
+                    "fontFamily": "JetBrains Mono, monospace",
+                },
+            ))
+
+        if not prem_lines:
+            prem_lines.append(html.Div(
+                "★ Премиум",
+                style={"fontSize": "9px", "color": "#c4b5fd", "marginTop": "3px"},
+            ))
+
+        children.extend(prem_lines)
 
     return html.Div(
         children,
@@ -205,12 +238,27 @@ def _build_grid(prog_df: "pd.DataFrame", types_ordered: list) -> html.Div:
         cells.append(_column_header(vtype))
 
     # ── Строки: Ранг × Тип ───────────────────────────────────────────────
+    _has_shop = "vdb_shop_order" in prog_df.columns
+
     for era in eras:
         era_df = prog_df[prog_df["_era_int"] == era]
         cells.append(_rank_label(era))
 
         for vtype in types_ordered:
-            cell_df = era_df[era_df["_branch"] == vtype].sort_values("BR")
+            cell_df = era_df[era_df["_branch"] == vtype]
+
+            # Сортировка: по shop_order если есть, иначе по BR
+            if _has_shop:
+                sort_key = pd.to_numeric(
+                    cell_df["vdb_shop_order"], errors="coerce"
+                ).fillna(99999)
+                # Для техники без позиции — по BR
+                fallback = cell_df["BR"] * 10000
+                effective = sort_key.where(sort_key < 99999, fallback)
+                cell_df = cell_df.loc[effective.sort_values().index]
+            else:
+                cell_df = cell_df.sort_values("BR")
+
             if cell_df.empty:
                 cells.append(_empty_cell())
                 continue
@@ -230,6 +278,75 @@ def _build_grid(prog_df: "pd.DataFrame", types_ordered: list) -> html.Div:
             "gridTemplateColumns": f"52px repeat({len(types_ordered)}, 1fr)",
             "gap": "4px",
             "alignItems": "start",
+        },
+    )
+
+
+def _build_premium_panel(prem_df: "pd.DataFrame") -> html.Div:
+    import pandas as pd
+
+    if prem_df.empty:
+        return html.Div()
+
+    _has_shop = "vdb_shop_order" in prem_df.columns
+
+    eras = sorted(e for e in prem_df["_era_int"].unique() if 1 <= e <= 8)
+
+    counter = [9000]
+    sections = [
+        html.Div(
+            "👑 ОСОБАЯ",
+            style={
+                "backgroundColor": "#1e293b",
+                "borderRadius": "4px",
+                "padding": "6px 4px",
+                "textAlign": "center",
+                "fontSize": "9px", "fontWeight": "700",
+                "color": "#a78bfa",
+                "letterSpacing": "0.1em",
+                "minHeight": "52px",
+                "display": "flex", "alignItems": "center",
+                "justifyContent": "center",
+            },
+        )
+    ]
+
+    for era in eras:
+        era_df = prem_df[prem_df["_era_int"] == era]
+
+        # Сортировка по shop_order
+        if _has_shop:
+            sort_key = pd.to_numeric(
+                era_df["vdb_shop_order"], errors="coerce"
+            ).fillna(99999)
+            fallback = era_df["BR"] * 10000
+            effective = sort_key.where(sort_key < 99999, fallback)
+            era_df = era_df.loc[effective.sort_values().index]
+        else:
+            era_df = era_df.sort_values("BR")
+
+        cards = []
+        for _, row in era_df.iterrows():
+            cid = f"pgp-{counter[0]}"
+            counter[0] += 1
+            cards.append(_vehicle_card(row.to_dict(), cid))
+
+        # Ранг-метка + карточки премиума
+        sections.append(
+            html.Div([
+                _rank_label(era),
+                html.Div(cards, style={"padding": "3px"}),
+            ], style={"marginBottom": "4px"})
+        )
+
+    return html.Div(
+        sections,
+        style={
+            "display": "flex",
+            "flexDirection": "column",
+            "gap": "4px",
+            "minWidth": "160px",
+            "maxWidth": "200px",
         },
     )
 
@@ -257,15 +374,16 @@ def register(app, core, all_nations, all_types, tf_data) -> None:
         Input("prog-nation",  "value"),
         Input("prog-branch",  "value"),
         Input("sb-classes",   "value"),
+        Input("sb-mode",      "value"),
     )
-    def update_grid(nation, branch, classes):
+    def update_grid(nation, branch, classes, mode):
         if not nation or nation == "All":
             return (
                 dbc.Alert("⬅️ Выберите нацию для построения дерева.", color="info"),
                 "",
             )
 
-        df = core.get_progression_data(nation)
+        df = core.get_progression_data(nation, mode=mode or "All/Mixed")
         if df.empty:
             return dbc.Alert(f"Нет данных для нации «{nation}».", color="info"), ""
 
@@ -283,6 +401,10 @@ def register(app, core, all_nations, all_types, tf_data) -> None:
 
         prog_df = prog_df[prog_df["_branch"].isin(present)]
 
+        _is_prem = prog_df["VehicleClass"].isin(_PREM_CLASSES)
+        std_df   = prog_df[~_is_prem]
+        prem_df  = prog_df[_is_prem]
+
         n_must = int((prog_df["Verdict"] == VERDICT_MUST).sum())
         n_skip = int((prog_df["Verdict"] == VERDICT_SKIP).sum())
         n_prem = int((prog_df["Verdict"] == VERDICT_PREM).sum())
@@ -297,5 +419,28 @@ def register(app, core, all_nations, all_types, tf_data) -> None:
             html.Span(f"👑 {n_prem} Prem",   style={"color": "#a78bfa"}),
         ], style={"fontSize": "0.75rem", "color": "#94a3b8"})
 
-        grid = _build_grid(prog_df, present)
-        return grid, info
+        regular_grid  = _build_grid(std_df, present)
+        premium_panel = _build_premium_panel(prem_df)
+
+        layout = html.Div(
+            [
+                # Основное дерево
+                html.Div(regular_grid, style={"flex": "1 1 0", "minWidth": "0"}),
+                # Разделитель
+                html.Div(style={
+                    "width": "1px",
+                    "backgroundColor": "#334155",
+                    "margin": "0 8px",
+                    "alignSelf": "stretch",
+                }),
+                # Панель особой техники
+                html.Div(premium_panel, style={"flex": "0 0 auto"}),
+            ],
+            style={
+                "display": "flex",
+                "alignItems": "flex-start",
+                "gap": "0",
+            },
+        )
+
+        return layout, info

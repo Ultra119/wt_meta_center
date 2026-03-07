@@ -6,10 +6,8 @@ RANK_PENALTY: dict[int, float] = {
     -3: 0.10,
     -2: 0.30,
     -1: 0.90,
-
      0: 1.00,
     +1: 1.00,
-
     +2: 0.40,
     +3: 0.30,
     +4: 0.20,
@@ -32,11 +30,21 @@ ROMAN: dict[int, str] = {
     5: "V", 6: "VI", 7: "VII", 8: "VIII",
 }
 
-# Вердикты
 VERDICT_MUST = "MUST"
 VERDICT_PASS = "PASS"
 VERDICT_SKIP = "SKIP"
 VERDICT_PREM = "PREM"
+
+_PREM_CLASSES = {"Premium", "Pack", "Squadron", "Marketplace"}
+
+
+def _shop_sort_key(df: pd.DataFrame) -> pd.Series:
+    if "vdb_shop_order" in df.columns:
+        order    = pd.to_numeric(df["vdb_shop_order"], errors="coerce").fillna(99999)
+        fallback = df["BR"] * 10000
+        return order.where(order < 99999, fallback)
+    return df["BR"] * 10000
+
 
 def _br_to_era(br: float) -> int:
     thresholds = [2.3, 3.7, 5.3, 6.7, 8.3, 9.7, 11.3]
@@ -54,27 +62,51 @@ def _minmax(series: pd.Series) -> pd.Series:
 
 
 def _local_score(branch_df: pd.DataFrame) -> pd.Series:
-    wr   = _minmax(branch_df["WR"])
-    kd   = _minmax(branch_df["KD"])
-
+    wr = _minmax(branch_df["WR"])
+    kd = _minmax(branch_df["KD"])
     if "META_SCORE" in branch_df.columns:
         meta_vals = branch_df["META_SCORE"].fillna(0)
         if meta_vals.std() > 0.1:
             meta = _minmax(meta_vals)
             return (0.40 * wr + 0.30 * kd + 0.30 * meta).clip(0, 100)
-
     return (0.55 * wr + 0.45 * kd).clip(0, 100)
 
 
-def _rank_penalty(researcher_era: int, target_era: int, is_premium: bool = False) -> float:
+def _rank_penalty_std(researcher_era: int, target_era: int) -> float:
     diff = target_era - researcher_era
-    if is_premium:
-        if diff <= 1:
-            return RANK_PENALTY_PREMIUM.get(diff, 1.00)
-        return RANK_PENALTY_PREMIUM.get(diff, 0.20)
     if diff < 0:
         return RANK_PENALTY.get(diff, 0.05)
     return RANK_PENALTY.get(diff, 0.20)
+
+
+def _rank_penalty_prem(researcher_era: int, target_era: int) -> float:
+    diff = target_era - researcher_era
+    if diff <= 1:
+        return RANK_PENALTY_PREMIUM.get(diff, 1.00)
+    return RANK_PENALTY_PREMIUM.get(diff, 0.20)
+
+
+def _calc_prem_boost(
+    prem_era: int,
+    prem_score: float,
+    std_branch: pd.DataFrame,
+    target_era: int,
+) -> float:
+    prem_grind = prem_score * _rank_penalty_prem(prem_era, target_era)
+
+    best_free = 0.0
+    for _, row in std_branch.iterrows():
+        std_era   = int(row["_era_int"])
+        std_score = float(row["Local_Score"])
+        eff       = std_score * _rank_penalty_std(std_era, target_era)
+        if eff > best_free:
+            best_free = eff
+
+    if best_free < 1e-3:
+        return round(prem_grind / max(prem_score, 1e-3), 2)
+
+    return round(prem_grind / best_free, 2)
+
 
 def build_progression_data(df: pd.DataFrame, nation: str) -> pd.DataFrame:
     if df.empty:
@@ -84,10 +116,10 @@ def build_progression_data(df: pd.DataFrame, nation: str) -> pd.DataFrame:
     if out.empty:
         return pd.DataFrame()
 
-    # ── Разрешаем ранг ────────────────────────────────────────────────────
+    # ── Ранг ──────────────────────────────────────────────────────────────────
     if "vdb_era" in out.columns:
         eras = pd.to_numeric(out["vdb_era"], errors="coerce").fillna(0).astype(int)
-        bad = eras == 0
+        bad  = eras == 0
         eras[bad] = out.loc[bad, "BR"].apply(_br_to_era).values
         out["_era_int"] = eras.clip(1, 8)
     else:
@@ -95,58 +127,57 @@ def build_progression_data(df: pd.DataFrame, nation: str) -> pd.DataFrame:
 
     out["_branch"] = out["Type"].fillna("unknown").astype(str)
 
-    # ── Инициализация выходных колонок ────────────────────────────────────
-    out["Local_Score"] = 0.0
-    out["Verdict"]     = VERDICT_PASS
-    out["Skip_Reason"] = ""
-    out["Alt_Vehicle"] = ""
+    # ── Инициализация выходных колонок ────────────────────────────────────────
+    out["Local_Score"]   = 0.0
+    out["Verdict"]       = VERDICT_PASS
+    out["Skip_Reason"]   = ""
+    out["Alt_Vehicle"]   = ""
+    out["Prem_Boost"]    = 0.0    # только для премиума: ×N vs лучшей бесплатной
+    out["Prem_Pain_Fix"] = False  # True если ранг «болезненный» по стандарту
 
-    is_prem = out["VehicleClass"].isin(["Premium", "Pack", "Squadron", "Marketplace"])
+    is_prem = out["VehicleClass"].isin(_PREM_CLASSES)
+    std_df  = out[~is_prem].copy()
+    prem_df = out[is_prem].copy()
 
-    # ── Проход 1: вычисляем Local_Score для каждой ветки ─────────────────
-    for branch, grp in out.groupby("_branch"):
+    # ── Сортировка по позиции в дереве (shop_order) ───────────────────
+    if not std_df.empty:
+        std_df["_sort_key"] = _shop_sort_key(std_df)
+        std_df = std_df.sort_values("_sort_key").drop(columns=["_sort_key"])
+    if not prem_df.empty:
+        prem_df["_sort_key"] = _shop_sort_key(prem_df)
+        prem_df = prem_df.sort_values("_sort_key").drop(columns=["_sort_key"])
+
+    # Проход 1-S: Local_Score только среди стандартной техники в каждой ветке
+    for branch, grp in std_df.groupby("_branch"):
         scores = _local_score(grp)
-        out.loc[grp.index, "Local_Score"] = scores.values
+        std_df.loc[grp.index, "Local_Score"] = scores.values
 
-    # ── Проход 2: вердикты с анализом скипа ──────────────────────────────
-    for branch, grp in out.groupby("_branch"):
+    # Проход 2-S: вердикты
+    for branch, grp in std_df.groupby("_branch"):
         srt = grp.sort_values("BR")
         p60 = srt["Local_Score"].quantile(0.60)
 
         for pos, (row_idx, row) in enumerate(srt.iterrows()):
-            era      = int(row["_era_int"])
-            loc_s    = float(row["Local_Score"])
-            vclass   = str(row.get("VehicleClass", "Standard"))
-            prem_row = vclass in ("Premium", "Pack", "Squadron", "Marketplace")
+            era   = int(row["_era_int"])
+            loc_s = float(row["Local_Score"])
 
-            if prem_row:
-                out.at[row_idx, "Verdict"] = VERDICT_PREM
-                continue
+            prev = srt.iloc[:pos]
+            should_skip     = False
+            reason          = ""
+            alt_name        = ""
 
-            prev_all = srt.iloc[:pos]
-
-            should_skip = False
-            reason      = ""
-            alt_name    = ""
-
-            if not prev_all.empty:
-                best_eff   = 0.0
-                best_name  = ""
+            if not prev.empty:
+                best_eff         = 0.0
+                best_name        = ""
                 best_penalty_pct = 0.0
 
-                for _, prev_row in prev_all.iterrows():
-                    prev_vclass   = str(prev_row.get("VehicleClass", "Standard"))
-                    prev_is_prem  = prev_vclass in ("Premium", "Pack", "Squadron", "Marketplace")
-                    prev_era      = int(prev_row["_era_int"])
-                    prev_score    = float(prev_row["Local_Score"])
-
-                    pen = _rank_penalty(prev_era, era, is_premium=prev_is_prem)
-                    eff = prev_score * pen
-
+                for _, prev_row in prev.iterrows():
+                    pen = _rank_penalty_std(int(prev_row["_era_int"]), era)
+                    eff = float(prev_row["Local_Score"]) * pen
                     if eff > best_eff:
-                        best_eff          = eff
-                        best_name         = str(prev_row["Name"])
-                        best_penalty_pct  = pen * 100.0
+                        best_eff         = eff
+                        best_name        = str(prev_row["Name"])
+                        best_penalty_pct = pen * 100.0
 
                 if best_eff > loc_s * 1.05:
                     should_skip = True
@@ -158,22 +189,41 @@ def build_progression_data(df: pd.DataFrame, nation: str) -> pd.DataFrame:
                     alt_name = best_name
 
             if should_skip:
-                out.at[row_idx, "Verdict"]     = VERDICT_SKIP
-                out.at[row_idx, "Skip_Reason"] = reason
-                out.at[row_idx, "Alt_Vehicle"] = alt_name
+                std_df.at[row_idx, "Verdict"]     = VERDICT_SKIP
+                std_df.at[row_idx, "Skip_Reason"] = reason
+                std_df.at[row_idx, "Alt_Vehicle"] = alt_name
             elif loc_s >= p60:
-                out.at[row_idx, "Verdict"] = VERDICT_MUST
+                std_df.at[row_idx, "Verdict"] = VERDICT_MUST
             else:
-                out.at[row_idx, "Verdict"] = VERDICT_PASS
+                std_df.at[row_idx, "Verdict"] = VERDICT_PASS
 
-    # ── Проход 3: «Premium Fix» для болезненных рангов ────────────────────
-    std_df = out[~is_prem]
+    # «Болезненные» ранги — нет ни одного MUST среди стандарта
     era_has_must = std_df.groupby("_era_int")["Verdict"].apply(
         lambda v: (v == VERDICT_MUST).any()
     )
     pain_eras = set(era_has_must[~era_has_must].index.tolist())
 
-    prem_in_pain = is_prem & out["_era_int"].isin(pain_eras)
-    out.loc[prem_in_pain, "Verdict"] = VERDICT_PREM
+    if not prem_df.empty:
+        # Local_Score внутри премиума по веткам
+        for branch, grp in prem_df.groupby("_branch"):
+            scores = _local_score(grp)
+            prem_df.loc[grp.index, "Local_Score"] = scores.values
+
+        for row_idx, row in prem_df.iterrows():
+            prem_era   = int(row["_era_int"])
+            prem_score = float(row["Local_Score"])
+            branch     = str(row["_branch"])
+
+            prem_df.at[row_idx, "Verdict"]       = VERDICT_PREM
+            prem_df.at[row_idx, "Prem_Pain_Fix"] = prem_era in pain_eras
+
+            # Стандартная техника той же ветки для расчёта буста
+            std_branch = std_df[std_df["_branch"] == branch]
+            boost = _calc_prem_boost(prem_era, prem_score, std_branch, target_era=prem_era)
+            prem_df.at[row_idx, "Prem_Boost"] = boost
+
+    # ── Объединяем ────────────────────────────────────────────────────────────
+    out.update(std_df)
+    out.update(prem_df)
 
     return out

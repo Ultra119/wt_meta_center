@@ -188,6 +188,15 @@ def _build_vdb_row(v: dict) -> dict:
     row["vdb_required_vehicle"] = str(v.get("required_vehicle", "") or "")
     row["vdb_version"]          = str(v.get("version",          "") or "")
 
+    # Shop tree position — заполняется позже через _load_shop()
+    row["vdb_shop_column"] = -1
+    row["vdb_shop_row"]    = -1
+    row["vdb_shop_rank"]   = 0
+    row["vdb_shop_group"]  = ""
+    row["vdb_shop_nation"] = ""
+    row["vdb_shop_branch"] = ""
+    row["vdb_shop_order"]  = 99999
+
     return row
 
 
@@ -196,6 +205,42 @@ class VehicleDB:
         self._index: dict[str, dict] = {}
         self._units = None
         self._load(vehicles_json_path)
+
+        if vehicles_json_path:
+            dataset_dir = os.path.dirname(os.path.abspath(vehicles_json_path))
+            shop_path   = os.path.join(dataset_dir, "shop.blkx")
+            self._load_shop(shop_path)
+
+    def _load_shop(self, path: str) -> None:
+        try:
+            from analytics.shop_parser import parse_shop_file
+        except ImportError:
+            try:
+                from shop_parser import parse_shop_file
+            except ImportError:
+                print("[VehicleDB] ⚠️  shop_parser не найден — пропуск")
+                return
+
+        shop = parse_shop_file(path)
+        if not shop:
+            return
+
+        updated = 0
+        for vid, sdata in shop.items():
+            if vid in self._index:
+                self._index[vid]["vdb_shop_column"] = sdata["shop_column"]
+                self._index[vid]["vdb_shop_row"]    = sdata["shop_row"]
+                self._index[vid]["vdb_shop_rank"]   = sdata["shop_rank"]
+                self._index[vid]["vdb_shop_group"]  = sdata["shop_group"]
+                self._index[vid]["vdb_shop_nation"] = sdata["shop_nation"]
+                self._index[vid]["vdb_shop_branch"] = sdata["shop_branch"]
+                self._index[vid]["vdb_shop_order"]  = sdata["shop_order"]
+                updated += 1
+
+        print(
+            f"[VehicleDB] 🗺️  Shop-позиции: "
+            f"обновлено {updated}/{len(shop)} записей в индексе"
+        )
 
     def _load(self, path: str) -> None:
         dataset_dir = os.path.dirname(os.path.abspath(path)) if path else ""
