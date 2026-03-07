@@ -160,8 +160,10 @@ def build_progression_data(df: pd.DataFrame, nation: str) -> pd.DataFrame:
     out["Verdict"]       = VERDICT_PASS
     out["Skip_Reason"]   = ""
     out["Alt_Vehicle"]   = ""
-    out["Prem_Boost"]    = 0.0    # только для премиума: ×N vs лучшей бесплатной
-    out["Prem_Pain_Fix"] = False  # True если ранг «болезненный» по стандарту
+    out["Cross_Alt"]     = ""
+    out["Cross_Hint"]    = ""
+    out["Prem_Boost"]    = 0.0
+    out["Prem_Pain_Fix"] = False
 
     is_prem = out["VehicleClass"] != _STD_CLASS
     std_df  = out[~is_prem].copy()
@@ -230,6 +232,70 @@ def build_progression_data(df: pd.DataFrame, nation: str) -> pd.DataFrame:
                 std_df.at[row_idx, "Verdict"] = VERDICT_MUST
             else:
                 std_df.at[row_idx, "Verdict"] = VERDICT_PASS
+
+    _CROSS_THRESHOLD  = 1.30
+    _CROSS_BR_WINDOW  = 0.7
+
+    _GROUND_BRANCHES   = {"medium_tank", "light_tank", "heavy_tank", "tank_destroyer", "spaa"}
+    _AVIATION_BRANCHES = {"fighter", "bomber", "assault", "attack_helicopter", "utility_helicopter"}
+    _SKIP_CROSS        = {"spaa"}   # ЗСУ не участвуют в межветочном сравнении
+
+    def _super_cat(branch: str) -> str:
+        if branch in _GROUND_BRANCHES:   return "Ground"
+        if branch in _AVIATION_BRANCHES: return "Aviation"
+        return "Fleet"
+
+    # Предвычисляем суперкатегорию для каждой строки один раз
+    std_df["_super_cat"] = std_df["_branch"].apply(_super_cat)
+
+    if "META_SCORE" in std_df.columns:
+        for row_idx, row in std_df.iterrows():
+            if std_df.at[row_idx, "Verdict"] not in (VERDICT_MUST, VERDICT_PASS):
+                continue
+
+            our_meta   = float(row.get("META_SCORE", 0) or 0)
+            our_br     = float(row["BR"])
+            our_branch = str(row["_branch"])
+            our_cat    = str(row["_super_cat"])
+
+            if our_meta < 1e-3 or our_branch in _SKIP_CROSS:
+                continue
+
+            best_cross_meta = 0.0
+            best_cross_name = ""
+            best_cross_br   = 0.0
+
+            mask = (
+                (std_df["_branch"]    != our_branch) &
+                (std_df["_super_cat"] == our_cat) &
+                (std_df["BR"] >= our_br - _CROSS_BR_WINDOW) &
+                (std_df["BR"] <= our_br + _CROSS_BR_WINDOW) &
+                (std_df["Verdict"] != VERDICT_SKIP)
+            )
+            for alt_idx, alt_row in std_df[mask].iterrows():
+                alt_meta = float(alt_row.get("META_SCORE", 0) or 0)
+                if alt_meta > best_cross_meta:
+                    best_cross_meta = alt_meta
+                    best_cross_name = str(alt_row["Name"])
+                    best_cross_br   = float(alt_row["BR"])
+
+            if best_cross_meta > our_meta * _CROSS_THRESHOLD:
+                std_df.at[row_idx, "Cross_Alt"]  = best_cross_name
+                std_df.at[row_idx, "Cross_Hint"] = (
+                    f"Для сетапа лучше «{best_cross_name}» ({best_cross_br:.1f}) "
+                    f"— он сильнее в своём BR"
+                )
+                if std_df.at[row_idx, "Verdict"] == VERDICT_MUST:
+                    std_df.at[row_idx, "Verdict"] = VERDICT_PASS
+
+    std_df.drop(columns=["_super_cat"], errors="ignore", inplace=True)
+
+    spaa_must = (std_df["_branch"] == "spaa") & (std_df["Verdict"] == VERDICT_MUST)
+    std_df.loc[spaa_must, "Verdict"] = VERDICT_PASS
+
+    if "Cross_Alt" not in std_df.columns:
+        std_df["Cross_Alt"]  = ""
+        std_df["Cross_Hint"] = ""
 
     # «Болезненные» ранги — нет ни одного MUST среди стандарта
     era_has_must = std_df.groupby("_era_int")["Verdict"].apply(

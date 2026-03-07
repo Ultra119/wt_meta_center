@@ -110,7 +110,24 @@ def _vehicle_card(row: dict, card_id: str) -> html.Div:
         _stat_chip("LS", f"{loc_s:.0f}"),
     ], style={"display": "flex", "gap": "8px"})
 
+    cross_hint = str(row.get("Cross_Hint", "") or "")
+
     children = [header_row, stats_row]
+
+    # ── Кросс-хинт: лучшая техника из соседней ветки ─────────────────────────
+    if cross_hint:
+        children.append(html.Div(
+            cross_hint,
+            style={
+                "fontSize": "9px",
+                "fontWeight": "normal",
+                "color": "#7dd3fc",        # голубой — отличается от красного SKIP
+                "marginTop": "5px",
+                "paddingTop": "5px",
+                "borderTop": "1px solid rgba(125,211,252,0.20)",
+                "lineHeight": "1.4",
+            },
+        ))
 
     # ── Причина скипа: вынесена в "подвал" без курсива ────────────────────────
     if verdict == VERDICT_SKIP and reason:
