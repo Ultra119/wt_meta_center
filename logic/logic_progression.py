@@ -44,6 +44,7 @@ VERDICT_MUST = "MUST"
 VERDICT_PASS = "PASS"
 VERDICT_SKIP = "SKIP"
 VERDICT_PREM = "PREM"
+VERDICT_FILL = "FILL"
 
 _STD_CLASS   = "Standard"
 
@@ -65,6 +66,8 @@ def _br_to_era(br: float) -> int:
 
 
 _MUST_MIN_META = 42.0
+_SKIP_MAX_META = 30.0
+_SKIP_FLOOR_META = 30.0
 
 
 def _minmax(series: pd.Series) -> pd.Series:
@@ -132,11 +135,21 @@ def _calc_prem_boost(
     return round(prem_grind / best_free, 2)
 
 
-def build_progression_data(df: pd.DataFrame, nation: str) -> pd.DataFrame:
+def build_progression_data(
+    df: pd.DataFrame,
+    nation: str,
+    min_lineup: int = 4,
+    excluded_types: list | None = None,
+) -> pd.DataFrame:
     if df.empty:
         return pd.DataFrame()
 
     out = df[df["Nation"] == nation].copy() if nation != "All" else df.copy()
+    if out.empty:
+        return pd.DataFrame()
+
+    if excluded_types:
+        out = out[~out["Type"].isin(excluded_types)]
     if out.empty:
         return pd.DataFrame()
 
@@ -178,10 +191,11 @@ def build_progression_data(df: pd.DataFrame, nation: str) -> pd.DataFrame:
         std_df["Local_Score"] = pd.to_numeric(std_df["META_SCORE"], errors="coerce").fillna(0)
 
     # Проход 2-S: вердикты
-    _GROUND_BRANCHES   = {"medium_tank", "light_tank", "heavy_tank", "tank_destroyer", "spaa"}
+    _GROUND_BRANCHES   = {"medium_tank", "light_tank", "heavy_tank", "tank_destroyer"}
     _AVIATION_BRANCHES = {"fighter", "bomber", "assault", "attack_helicopter", "utility_helicopter"}
 
     def _super_cat(branch: str) -> str:
+        if branch == "spaa":              return "AntiAir"
         if branch in _GROUND_BRANCHES:   return "Ground"
         if branch in _AVIATION_BRANCHES: return "Aviation"
         return "Fleet"
@@ -208,12 +222,16 @@ def build_progression_data(df: pd.DataFrame, nation: str) -> pd.DataFrame:
             if not prev.empty and not no_data:
                 best_eff  = 0.0
                 best_name = ""
+                best_br   = -1.0
                 target_br = float(row["BR"])
 
                 for prev_idx, prev_row in prev.iterrows():
-                    if std_df.at[prev_idx, "Verdict"] == VERDICT_SKIP:
+                    if std_df.at[prev_idx, "Verdict"] in (VERDICT_SKIP, VERDICT_MUST):
                         continue
                     if float(prev_row.get("META_SCORE", 0) or 0) < 1.0:
+                        continue
+                    prev_br = float(prev_row["BR"])
+                    if target_br - prev_br > _MM_WINDOW:
                         continue
                     prev_group = str(prev_row.get("vdb_shop_group", "") or "") if has_groups else ""
                     if our_group and our_group == prev_group:
@@ -225,9 +243,10 @@ def build_progression_data(df: pd.DataFrame, nation: str) -> pd.DataFrame:
                         target_br=target_br,
                     )
                     eff = float(prev_row["Local_Score"]) * pen
-                    if eff > best_eff:
+                    if eff > best_eff or (eff >= best_eff * 0.999 and prev_br > best_br):
                         best_eff  = eff
                         best_name = str(prev_row["Name"])
+                        best_br   = prev_br
 
                 if best_eff > loc_s * 1.05:
                     should_skip = True
@@ -241,6 +260,12 @@ def build_progression_data(df: pd.DataFrame, nation: str) -> pd.DataFrame:
                 std_df.at[row_idx, "Verdict"]     = VERDICT_SKIP
                 std_df.at[row_idx, "Skip_Reason"] = reason
                 std_df.at[row_idx, "Alt_Vehicle"] = alt_name
+            elif not no_data and loc_s < _SKIP_MAX_META:
+                # Абсолютно слабая техника — скип без объяснений через альтернативу
+                std_df.at[row_idx, "Verdict"]     = VERDICT_SKIP
+                std_df.at[row_idx, "Skip_Reason"] = (
+                    f"Слабая техника (META {loc_s:.0f} < {_SKIP_MAX_META:.0f}) — "
+                )
             else:
                 qualifies_must = (
                     not no_data
@@ -252,8 +277,7 @@ def build_progression_data(df: pd.DataFrame, nation: str) -> pd.DataFrame:
     _CROSS_THRESHOLD      = 1.30
     _CROSS_SKIP_THRESHOLD = 1.40
     _CROSS_BR_WINDOW      = 0.7
-    _SKIP_CROSS           = {"spaa"}
-    _NO_CROSS_SKIP_BRANCHES = {"spaa"}
+    _NO_CROSS_BRANCHES = {"spaa"}
 
     # Предвычисляем суперкатегорию один раз
     std_df["_super_cat"] = std_df["_branch"].apply(_super_cat)
@@ -268,16 +292,19 @@ def build_progression_data(df: pd.DataFrame, nation: str) -> pd.DataFrame:
             our_branch = str(row["_branch"])
             our_cat    = str(row["_super_cat"])
 
-            if our_meta < 1e-3 or our_branch in _SKIP_CROSS:
+            if our_meta < 1e-3 or our_branch in _NO_CROSS_BRANCHES:
                 continue
 
             best_cross_meta = 0.0
             best_cross_name = ""
             best_cross_br   = 0.0
 
+            our_era    = int(row["_era_int"])
+
             mask = (
                 (std_df["_branch"]    != our_branch) &
                 (std_df["_super_cat"] == our_cat) &
+                (std_df["_era_int"]   == our_era) &
                 (std_df["BR"] >= our_br - _CROSS_BR_WINDOW) &
                 (std_df["BR"] <= our_br + _CROSS_BR_WINDOW) &
                 (std_df["Verdict"]    != VERDICT_SKIP)
@@ -303,22 +330,15 @@ def build_progression_data(df: pd.DataFrame, nation: str) -> pd.DataFrame:
                     std_df.at[row_idx, "Verdict"] = VERDICT_PASS
                 elif (
                     cur_verdict == VERDICT_PASS
-                    and our_branch not in _NO_CROSS_SKIP_BRANCHES
                     and best_cross_meta > our_meta * _CROSS_SKIP_THRESHOLD
                 ):
-                    # PASS → SKIP: кросс-ветка значительно лучше, качать эту нет смысла
                     std_df.at[row_idx, "Verdict"]     = VERDICT_SKIP
                     std_df.at[row_idx, "Skip_Reason"] = (
                         f"Лучше качать «{best_cross_name}» ({best_cross_br:.1f}) "
                         f"из соседней ветки (META {best_cross_meta:.0f} vs {our_meta:.0f})"
                     )
                     std_df.at[row_idx, "Alt_Vehicle"] = best_cross_name
-                    std_df.at[row_idx, "Cross_Hint"]  = ""  # не дублируем
-
-    std_df.drop(columns=["_super_cat"], errors="ignore", inplace=True)
-
-    spaa_must = (std_df["_branch"] == "spaa") & (std_df["Verdict"] == VERDICT_MUST)
-    std_df.loc[spaa_must, "Verdict"] = VERDICT_PASS
+                    std_df.at[row_idx, "Cross_Hint"]  = ""
 
     if "Cross_Alt" not in std_df.columns:
         std_df["Cross_Alt"]  = ""
@@ -327,7 +347,7 @@ def build_progression_data(df: pd.DataFrame, nation: str) -> pd.DataFrame:
     std_df["Forward_Hint"] = ""
 
 
-    _FORWARD_THRESHOLD = 1.35   # на 35% лучше — стоит упомянуть
+    _FORWARD_THRESHOLD = 1.35
 
     if "META_SCORE" in std_df.columns:
         for branch, grp in std_df.groupby("_branch"):
@@ -371,6 +391,63 @@ def build_progression_data(df: pd.DataFrame, nation: str) -> pd.DataFrame:
         lambda v: (v == VERDICT_MUST).any()
     )
     pain_eras = set(era_has_must[~era_has_must].index.tolist())
+
+    _BR_FILL_WINDOW = 1.0
+
+    std_df["_super_cat"] = std_df["_branch"].apply(_super_cat)
+
+    for (super_cat, era), grp in std_df.groupby(["_super_cat", "_era_int"]):
+        must_rows = grp[grp["Verdict"] == VERDICT_MUST]
+        n_must    = len(must_rows)
+        if n_must >= min_lineup:
+            continue
+
+        # Опорный BR — лучший MUST в этом ранге; если MUST нет — медиана ранга
+        if not must_rows.empty:
+            anchor_br = float(must_rows.loc[
+                must_rows["META_SCORE"].idxmax(), "BR"
+            ])
+        else:
+            anchor_br = float(grp["BR"].median())
+
+        need = min_lineup - n_must
+
+        candidates = grp[
+            (grp["Verdict"].isin([VERDICT_PASS, VERDICT_SKIP])) &
+            (grp["BR"] >= anchor_br - _BR_FILL_WINDOW) &
+            (grp["BR"] <= anchor_br + _BR_FILL_WINDOW)
+        ].copy()
+
+        if candidates.empty:
+            continue
+
+        candidates = candidates.sort_values("META_SCORE", ascending=False)
+        for fill_idx in candidates.index[:need]:
+            std_df.at[fill_idx, "Verdict"]     = VERDICT_FILL
+            std_df.at[fill_idx, "Skip_Reason"] = ""
+            std_df.at[fill_idx, "Alt_Vehicle"] = ""
+
+    std_df.drop(columns=["_super_cat"], errors="ignore", inplace=True)
+
+    skip_names: set[str] = set(
+        std_df.loc[std_df["Verdict"] == VERDICT_SKIP, "Name"].tolist()
+    )
+    if skip_names:
+        for row_idx in std_df.index:
+            alt = str(std_df.at[row_idx, "Alt_Vehicle"] or "")
+            if alt in skip_names:
+                std_df.at[row_idx, "Skip_Reason"] = ""
+                std_df.at[row_idx, "Alt_Vehicle"] = ""
+                std_df.at[row_idx, "Verdict"]     = VERDICT_PASS
+
+            cross = str(std_df.at[row_idx, "Cross_Alt"] or "")
+            if cross in skip_names:
+                std_df.at[row_idx, "Cross_Alt"]  = ""
+                std_df.at[row_idx, "Cross_Hint"] = ""
+
+            fwd = str(std_df.at[row_idx, "Forward_Hint"] or "")
+            if fwd and any(name in fwd for name in skip_names):
+                std_df.at[row_idx, "Forward_Hint"] = ""
 
     if not prem_df.empty:
         # Local_Score для премиума = его META_SCORE напрямую

@@ -6,12 +6,13 @@ from ui.helpers import fmt_type, CLASS_PREFIX, _NATION_FLAG, _TYPE_ICON
 from logic.logic_progression import (
     build_progression_data,
     ROMAN,
-    VERDICT_MUST, VERDICT_PASS, VERDICT_SKIP, VERDICT_PREM,
+    VERDICT_MUST, VERDICT_PASS, VERDICT_SKIP, VERDICT_PREM, VERDICT_FILL,
 )
 
 # ── Цветовая схема вердиктов ──────────────────────────────────────────────────
 _VC = {
     VERDICT_MUST: {"border": "#10b981", "bg": "rgba(16,185,129,0.08)",  "icon": "🟢", "label": "Must Play"},
+    VERDICT_FILL: {"border": "#38bdf8", "bg": "rgba(56,189,248,0.07)",  "icon": "🔵", "label": "Lineup Filler"},
     VERDICT_PASS: {"border": "#fbbf24", "bg": "rgba(251,191,36,0.06)",  "icon": "🟡", "label": "Passable"},
     VERDICT_SKIP: {"border": "#f87171", "bg": "rgba(248,113,113,0.08)", "icon": "🔴", "label": "Hard Skip"},
     VERDICT_PREM: {"border": "#a78bfa", "bg": "rgba(167,139,250,0.09)", "icon": "👑", "label": "Premium Fix"},
@@ -545,6 +546,7 @@ def _build_unified_grid(
 def _legend() -> html.Div:
     items = [
         (VERDICT_MUST, "Must Play — лидер ветки, сажать экспертов, фокус на RP"),
+        (VERDICT_FILL, "Lineup Filler — лучшее для сетапа когда MUST не хватает"),
         (VERDICT_PASS, "Passable — проходная, не задерживаться"),
         (VERDICT_SKIP, "Hard Skip — исследуй по дереву, но НЕ сажай экипаж"),
         (VERDICT_PREM, "Premium Fix — решение для болезненного ранга"),
@@ -559,32 +561,78 @@ def _legend() -> html.Div:
 
 
 def register(app, core, all_nations, all_types, tf_data) -> None:
+    # заменить на иконки из игры
+    _BRANCH_TYPE_LABELS = {
+        "medium_tank":        "🔫 Средние",
+        "light_tank":         "💨 Лёгкие",
+        "heavy_tank":         "🛡 Тяжёлые",
+        "tank_destroyer":     "🎯 ПТ-САУ",
+        "spaa":               "🚀 ЗСУ",
+        "fighter":            "✈️ Истребители",
+        "bomber":             "💣 Бомбардировщики",
+        "assault":            "🔥 Штурмовики",
+        "attack_helicopter":  "🚁 Ударные верт.",
+        "utility_helicopter": "🔧 Утилит. верт.",
+        "destroyer":          "⚓ Эсминцы",
+        "heavy_cruiser":      "🚢 Тяж. крейсеры",
+        "light_cruiser":      "🛥 Лёг. крейсеры",
+        "battleship":         "⚔️ Линкоры",
+        "battlecruiser":      "🔱 Линейные кр.",
+        "boat":               "🚤 Катера",
+        "heavy_boat":         "⛵ Тяж. катера",
+        "frigate":            "🛳 Фрегаты",
+        "barge":              "🪝 Баржи",
+    }
+
+    @app.callback(
+        Output("prog-type-toggles", "options"),
+        Output("prog-type-toggles", "value"),
+        Input("prog-branch", "value"),
+    )
+    def update_type_options(branch):
+        types_in_branch = _BRANCH_TYPES.get(branch, [])
+        options = [
+            {"label": _BRANCH_TYPE_LABELS.get(t, t), "value": t}
+            for t in types_in_branch
+        ]
+        all_values = [t for t in types_in_branch]
+        return options, all_values
 
     @app.callback(
         Output("prog-grid",   "children"),
         Output("prog-info",   "children"),
-        Input("prog-nation",  "value"),
-        Input("prog-branch",  "value"),
-        Input("sb-mode",      "value"),
+        Input("prog-nation",       "value"),
+        Input("prog-branch",       "value"),
+        Input("prog-slots",        "value"),
+        Input("prog-type-toggles", "value"),
+        Input("sb-mode",           "value"),
     )
-    def update_grid(nation, branch, mode):
+    def update_grid(nation, branch, slots, active_types, mode):
         if not nation or nation == "All":
             return (
                 dbc.Alert("⬅️ Выберите нацию для построения дерева.", color="info"),
                 "",
             )
 
+        branch_types   = _BRANCH_TYPES.get(branch, [])
+        active_set     = set(active_types or [])
+        excluded_types = [t for t in branch_types if t not in active_set]
+        min_lineup     = int(slots or 4)
+
         df = core.get_progression_data(nation, mode=mode or "All/Mixed")
         if df.empty:
             return dbc.Alert(f"Нет данных для нации «{nation}».", color="info"), ""
 
-        prog_df = build_progression_data(df, nation)
+        prog_df = build_progression_data(
+            df, nation,
+            min_lineup=min_lineup,
+            excluded_types=excluded_types,
+        )
         if prog_df.empty:
             return dbc.Alert("Нет данных после расчёта.", color="warning"), ""
 
-        # Фильтрация по ветке
-        branch_types = _BRANCH_TYPES.get(branch, [])
-        present = [t for t in branch_types if t in prog_df["_branch"].values]
+        # Фильтрация по ветке (только активные типы)
+        present = [t for t in branch_types if t in active_set and t in prog_df["_branch"].values]
         if not present:
             return dbc.Alert("В этой ветке нет техники данной нации.", color="warning"), ""
 
@@ -595,6 +643,7 @@ def register(app, core, all_nations, all_types, tf_data) -> None:
         prem_df  = prog_df[~_is_std]
 
         n_must  = int((prog_df["Verdict"] == VERDICT_MUST).sum())
+        n_fill  = int((prog_df["Verdict"] == VERDICT_FILL).sum())
         n_skip  = int((prog_df["Verdict"] == VERDICT_SKIP).sum())
         n_prem  = int((prog_df["Verdict"] == VERDICT_PREM).sum())
         total   = len(prog_df)
@@ -603,9 +652,10 @@ def register(app, core, all_nations, all_types, tf_data) -> None:
         info = html.Span([
             html.B(f"{flag} {nation.title()}"),
             f"  ·  {branch}  ·  всего {total} машин  ·  ",
-            html.Span(f"🟢 {n_must} Must  ", style={"color": "#10b981"}),
-            html.Span(f"🔴 {n_skip} Skip  ", style={"color": "#f87171"}),
-            html.Span(f"👑 {n_prem} Prem",   style={"color": "#a78bfa"}),
+            html.Span(f"🟢 {n_must} Must  ",  style={"color": "#10b981"}),
+            html.Span(f"🔵 {n_fill} Fill  ",  style={"color": "#38bdf8"}),
+            html.Span(f"🔴 {n_skip} Skip  ",  style={"color": "#f87171"}),
+            html.Span(f"👑 {n_prem} Prem",    style={"color": "#a78bfa"}),
         ], style={"fontSize": "0.75rem", "color": "#94a3b8"})
 
         # Единая сетка: std + premium + event в одном CSS grid

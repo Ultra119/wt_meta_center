@@ -295,6 +295,7 @@ def _tab_farm(all_nations: list, tf_data: TypeFilterData) -> html.Div:
 def _tab_progression(all_nations: list) -> html.Div:
     nations_no_all = [n for n in all_nations if n != "All"]
     return html.Div([
+        # ── Строка 1: Нация + Ветка + Слоты ──────────────────────────────────
         dbc.Row([
             dbc.Col([
                 html.Div("Нация", className="section-label"),
@@ -319,27 +320,61 @@ def _tab_progression(all_nations: list) -> html.Div:
                     inputStyle={"marginRight": "5px", "marginLeft": "12px"},
                     labelStyle={"color": "#e2e8f0", "fontSize": "13px"},
                 ),
-            ], width=5),
+            ], width=4),
+            dbc.Col([
+                html.Div("Слоты в сетапе", className="section-label"),
+                dbc.RadioItems(
+                    id="prog-slots",
+                    options=[
+                        {"label": "3", "value": 3},
+                        {"label": "4", "value": 4},
+                        {"label": "5", "value": 5},
+                    ],
+                    value=4,
+                    inline=True,
+                    inputStyle={"marginRight": "4px", "marginLeft": "10px"},
+                    labelStyle={"color": "#e2e8f0", "fontSize": "13px"},
+                ),
+            ], width=2),
             dbc.Col([
                 html.Div(id="prog-info", className="caption-text"),
-            ], width=4),
+            ], width=3),
+        ], className="panel mb-2"),
+        # ── Строка 2: Типы техники (зависит от ветки) ────────────────────────
+        dbc.Row([
+            dbc.Col([
+                html.Div("Играю на типах", className="section-label"),
+                dbc.Checklist(
+                    id="prog-type-toggles",
+                    options=[],   # заполняется callback'ом по ветке
+                    value=[],
+                    inline=True,
+                    inputStyle={"marginRight": "4px", "marginLeft": "10px"},
+                    labelStyle={"color": "#e2e8f0", "fontSize": "12px"},
+                ),
+            ], width=12),
         ], className="panel mb-3"),
+        # ── Легенда ───────────────────────────────────────────────────────────
         html.Div([
             html.Span([
                 html.Span("🟢", style={"marginRight": "3px"}),
-                html.Span("Must Play — лидер ветки, экипаж экспертов",   style={"color": "#94a3b8"}),
-            ], style={"marginRight": "16px", "fontSize": "11px"}),
+                html.Span("Must Play",   style={"color": "#94a3b8"}),
+            ], style={"marginRight": "14px", "fontSize": "11px"}),
+            html.Span([
+                html.Span("🔵", style={"marginRight": "3px"}),
+                html.Span("Lineup Filler",   style={"color": "#94a3b8"}),
+            ], style={"marginRight": "14px", "fontSize": "11px"}),
             html.Span([
                 html.Span("🟡", style={"marginRight": "3px"}),
-                html.Span("Passable — проходная, не задерживаться",       style={"color": "#94a3b8"}),
-            ], style={"marginRight": "16px", "fontSize": "11px"}),
+                html.Span("Passable",       style={"color": "#94a3b8"}),
+            ], style={"marginRight": "14px", "fontSize": "11px"}),
             html.Span([
                 html.Span("🔴", style={"marginRight": "3px"}),
-                html.Span("Hard Skip — НЕ сажать экипаж, грайндить предыдущей", style={"color": "#94a3b8"}),
-            ], style={"marginRight": "16px", "fontSize": "11px"}),
+                html.Span("Hard Skip",      style={"color": "#94a3b8"}),
+            ], style={"marginRight": "14px", "fontSize": "11px"}),
             html.Span([
                 html.Span("👑", style={"marginRight": "3px"}),
-                html.Span("Premium Fix — решение для болезненного ранга", style={"color": "#94a3b8"}),
+                html.Span("Premium Fix",    style={"color": "#94a3b8"}),
             ], style={"fontSize": "11px"}),
         ], style={"marginBottom": "10px", "padding": "0 2px"}),
         dcc.Loading(
