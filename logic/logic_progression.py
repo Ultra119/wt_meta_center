@@ -193,7 +193,6 @@ def _calc_prem_boost(
         return round(prem_grind / max(prem_score, 1e-3), 2)
     return round(prem_grind / best_free, 2)
 
-
 def build_progression_data(
     df: pd.DataFrame,
     nation: str,
@@ -398,8 +397,13 @@ def build_progression_data(
                 best_meta = 0.0
                 best_name = ""
                 best_br   = 0.0
+                our_era_int = int(row["_era_int"])
                 for _, ahead_row in srt.iloc[pos + 1:].iterrows():
-                    a_idx  = ahead_row.name
+                    a_idx      = ahead_row.name
+                    a_era      = int(ahead_row.get("_era_int", 0))
+                    # Смотрим только в пределах текущего и следующего ранга
+                    if a_era > our_era_int + 1:
+                        break
                     a_meta = float(ahead_row.get("META_SCORE", 0) or 0)
                     if std_df.at[a_idx, "Verdict"] == VERDICT_SKIP:
                         continue
@@ -407,12 +411,6 @@ def build_progression_data(
                         best_meta = a_meta
                         best_name = str(ahead_row["Name"])
                         best_br   = float(ahead_row["BR"])
-
-                if best_meta > our_meta * _FORWARD_THRESHOLD:
-                    std_df.at[row_idx, "Forward_Hint"] = (
-                        f"Терпи — впереди «{best_name}» ({best_br:.1f}) "
-                        f"намного сильнее"
-                    )
 
     # ── «Болезненные» ранги (нет ни одного MUST) ─────────────────────────────
     era_has_must = std_df.groupby("_era_int")["Verdict"].apply(
@@ -514,6 +512,46 @@ def build_progression_data(
             std_df.at[fill_idx, "Skip_Reason"] = ""
             std_df.at[fill_idx, "Alt_Vehicle"] = ""
             filled += 1
+
+    std_df.drop(columns=["_super_cat"], errors="ignore", inplace=True)
+    _BR_STAY_THRESHOLD = 1.15
+
+    std_df["_super_cat"] = std_df["_branch"].apply(_super_cat)
+
+    for (branch, era), grp in std_df.groupby(["_branch", "_era_int"]):
+        era_int  = int(era)
+        grp_meta = grp.assign(
+            META_SCORE=pd.to_numeric(grp["META_SCORE"], errors="coerce").fillna(0)
+        )
+        anchors = grp_meta[grp_meta["Verdict"].isin([VERDICT_MUST, VERDICT_FILL])]
+        if anchors.empty:
+            continue
+
+        anchor_scores: list[tuple[float, float, int]] = []
+        for idx, row in anchors.iterrows():
+            br = float(row["BR"])
+            ls = _lineup_score(grp_meta, br, junk_thresh, min_lineup)
+            anchor_scores.append((br, ls, idx))
+
+        # Сортируем по BR
+        anchor_scores.sort(key=lambda x: x[0])
+
+        for i, (br, ls, idx) in enumerate(anchor_scores):
+            # Есть ли якорь с более высоким BR в том же ранге?
+            higher = [(b, s, ix) for b, s, ix in anchor_scores if b > br]
+            if not higher:
+                continue
+
+            best_higher_br, best_higher_ls, _ = max(higher, key=lambda x: x[1])
+
+            # Текущая позиция значимо лучше лучшей из более высоких
+            if ls > best_higher_ls * _BR_STAY_THRESHOLD:
+                existing = str(std_df.at[idx, "Forward_Hint"] or "")
+                if not existing:
+                    std_df.at[idx, "Forward_Hint"] = (
+                        f"Оптимальный BR в ранге — не торопись на {best_higher_br:.1f}, "
+                        f"здесь линейка сильнее ({ls:.0f} vs {best_higher_ls:.0f})"
+                    )
 
     std_df.drop(columns=["_super_cat"], errors="ignore", inplace=True)
 
