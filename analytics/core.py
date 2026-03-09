@@ -9,7 +9,6 @@ from vehicle_db          import VehicleDB
 from logic.logic_nations  import calculate_nation_dominance
 from logic.logic_farm     import get_farm_set      as _get_farm_set
 from logic.logic_brackets import get_bracket_stats as _get_bracket_stats
-from logic.logic_brackets import get_mm_context    as _get_mm_context
 
 
 class AnalyticsCore:
@@ -103,11 +102,13 @@ class AnalyticsCore:
     ) -> dict:
         return _get_farm_set(self.display_df, target_br, nation, vehicle_type)
 
-    def get_bracket_stats(self, step: int = 3, top_n: "int | None" = None) -> pd.DataFrame:
-        return _get_bracket_stats(self.display_df, step, top_n)
-
-    def get_mm_context(self, step: int = 1, top_n: "int | None" = None) -> pd.DataFrame:
-        return _get_mm_context(self.display_df, step, top_n)
+    def get_bracket_stats(
+        self,
+        step: int = 3,
+        top_n: "int | None" = None,
+        exclude_spaa: bool = False,
+    ) -> pd.DataFrame:
+        return _get_bracket_stats(self.display_df, step, top_n, exclude_spaa)
 
     def get_progression_data(self, nation: str, mode: str = "All/Mixed") -> "pd.DataFrame":
         """
@@ -116,8 +117,6 @@ class AnalyticsCore:
         _MODE_PRIORITY = ["Realistic", "Simulator", "Arcade"]
 
         df = self.full_df.copy()
-        if nation != "All":
-            df = df[df["Nation"] == nation]
         if df.empty:
             return pd.DataFrame()
 
@@ -172,6 +171,10 @@ class AnalyticsCore:
             df_grouped["VehicleClass"] = df_grouped["VehicleClass"].fillna("Standard")
 
         df_scored = score(df_grouped, self.settings)
+
+        if nation != "All":
+            df_scored = df_scored[df_scored["Nation"] == nation]
+
         return df_scored.round(2)
 
     def get_vehicle_row(self, name: str, nation: str = "") -> dict | None:

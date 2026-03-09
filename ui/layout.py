@@ -1,7 +1,3 @@
-"""
-Полный layout приложения.
-Собирает топ-бар, сайдбар и четыре вкладки.
-"""
 from dash import dcc, html
 import dash_bootstrap_components as dbc
 
@@ -11,7 +7,6 @@ from ui.type_filter import TypeFilterData
 BR_MIN = float(min(WT_BR_STEPS))
 BR_MAX = float(max(WT_BR_STEPS))
 
-# Отметки на слайдере БР: только целые числа подписаны
 BR_MARKS = {
     v: {"label": str(int(v)), "style": {"color": "#e2e8f0", "fontSize": "12px", "fontWeight": "600"}}
     if v == int(v) else {"label": ""}
@@ -159,7 +154,10 @@ def _tab_brackets() -> html.Div:
         if with_step:
             cols.append(dbc.Col([
                 html.Div("Детализация", className="section-label"),
-                dcc.Dropdown(id=f"br-step-{sfx}", options=_STEP_OPTS, value=1, clearable=False, searchable=False),
+                dcc.Dropdown(
+                    id=f"br-step-{sfx}", options=_STEP_OPTS,
+                    value=1, clearable=False, searchable=False,
+                ),
             ], width=3))
         cols.append(
             dbc.Col([
@@ -205,32 +203,78 @@ def _tab_brackets() -> html.Div:
         )
         return dbc.Row(cols, className="mb-3")
 
+    options_panel = dbc.Row([
+        dbc.Col([
+            html.Div("⚙️ Опции расчёта", className="section-label"),
+            html.Div([
+                html.Div([
+                    dbc.Switch(
+                        id="br-excl-spaa",
+                        value=True,
+                        style={"margin": "0"},
+                    ),
+                    html.Span(
+                        "Исключить ЗСУ из скора наций",
+                        style={"fontSize": "12px", "color": "#e2e8f0",
+                               "userSelect": "none"},
+                    ),
+                    html.Span(
+                        " ⓘ",
+                        id="br-spaa-tooltip-target",
+                        style={"fontSize": "11px", "color": "#64748b",
+                               "cursor": "help"},
+                    ),
+                    dbc.Tooltip(
+                        "ЗСУ — поддерживающий класс. Её META_SCORE отражает "
+                        "эффективность против воздуха, а не вклад в наземный бой. "
+                        "Включение ЗСУ завышает скор наций с большим зенитным парком.",
+                        target="br-spaa-tooltip-target",
+                        placement="right",
+                    ),
+                ], style={
+                    "display": "flex", "alignItems": "center",
+                    "gap": "8px",
+                    "padding": "6px 12px",
+                    "border": "1px solid #334155",
+                    "borderRadius": "6px",
+                    "backgroundColor": "#1e293b",
+                    "width": "fit-content",
+                }),
+            ]),
+        ], width="auto"),
+    ], className="panel mb-3", align="center")
+
     return html.Div([
         html.Div(id="brackets-info", className="caption-text"),
+
+        options_panel,
+
         dbc.Tabs(id="brackets-sub", active_tab="br-meta", children=[
 
             dbc.Tab(label="📊 META Score", tab_id="br-meta", children=[
                 _br_controls("meta"),
-                html.P("Средний META_SCORE топ-N машин нации в кронштейне. Золото = лучшая нация.", className="caption-text"),
-                dbc.Button("🔄 Пересчитать", id="br-calc-meta", color="success", size="sm", className="mb-2"),
+                html.P(
+                    "Взвешенный META_SCORE топ-N машин нации в кронштейне. "
+                    "Золото = лучшая нация. Нормализация — внутри типовой категории.",
+                    className="caption-text",
+                ),
+                dbc.Button("🔄 Пересчитать", id="br-calc-meta",
+                           color="success", size="sm", className="mb-2"),
                 dcc.Loading(id="loading-br-meta", type="dot", color="#10b981",
-                    children=html.Div(id="br-pivot-meta")),
-            ]),
-
-            dbc.Tab(label="⚔️ MM-Контекст", tab_id="br-mm", children=[
-                _br_controls("mm"),
-                html.P("Скор с учётом позиции в окне MM (±1.0 BR). Высокий META при низком MM = сила только в топе.", className="caption-text"),
-                dbc.Button("🔄 Пересчитать", id="br-calc-mm", color="success", size="sm", className="mb-2"),
-                dcc.Loading(id="loading-br-mm", type="dot", color="#10b981",
-                    children=html.Div(id="br-pivot-mm")),
+                            children=html.Div(id="br-pivot-meta")),
             ]),
 
             dbc.Tab(label="🌍 Топ Наций", tab_id="br-nations", children=[
                 _br_controls("nat", with_step=False),
-                html.P("Power Score наций по среднему META топ-N машин.", className="caption-text"),
-                dbc.Button("🔄 Пересчитать", id="br-calc-nat", color="success", size="sm", className="mb-2"),
+                html.P(
+                    "Power Score наций — взвешенное среднее META топ-N машин. "
+                    "ЗСУ исключается если включён переключатель выше.",
+                    className="caption-text",
+                ),
+                dbc.Button("🔄 Пересчитать", id="br-calc-nat",
+                           color="success", size="sm", className="mb-2"),
                 dcc.Loading(id="loading-br-nat", type="dot", color="#10b981",
-                    children=html.Div(id="br-nations-table")),
+                            children=html.Div(id="br-nations-table")),
             ]),
         ]),
     ], style={"padding": "4px"})
@@ -289,13 +333,9 @@ def _tab_farm(all_nations: list, tf_data: TypeFilterData) -> html.Div:
     ], style={"padding": "4px"})
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-
-
 def _tab_progression(all_nations: list) -> html.Div:
     nations_no_all = [n for n in all_nations if n != "All"]
     return html.Div([
-        # ── Строка 1: Нация + Ветка + Слоты ──────────────────────────────────
         dbc.Row([
             dbc.Col([
                 html.Div("Нация", className="section-label"),
@@ -340,13 +380,12 @@ def _tab_progression(all_nations: list) -> html.Div:
                 html.Div(id="prog-info", className="caption-text"),
             ], width=3),
         ], className="panel mb-2"),
-        # ── Строка 2: Типы техники (зависит от ветки) ────────────────────────
         dbc.Row([
             dbc.Col([
                 html.Div("Играю на типах", className="section-label"),
                 dbc.Checklist(
                     id="prog-type-toggles",
-                    options=[],   # заполняется callback'ом по ветке
+                    options=[],
                     value=[],
                     inline=True,
                     inputStyle={"marginRight": "4px", "marginLeft": "10px"},
@@ -354,7 +393,6 @@ def _tab_progression(all_nations: list) -> html.Div:
                 ),
             ], width=12),
         ], className="panel mb-3"),
-        # ── Легенда ───────────────────────────────────────────────────────────
         html.Div([
             html.Span([
                 html.Span("🟢", style={"marginRight": "3px"}),
@@ -385,7 +423,6 @@ def _tab_progression(all_nations: list) -> html.Div:
     ], style={"padding": "4px"})
 
 def build(all_nations: list, all_types: list, tf_data: TypeFilterData) -> html.Div:
-    # ── Модальное окно карточки техники ───────────────────────────────────
     vehicle_modal = dbc.Modal(
         id="vehicle-modal",
         is_open=False,
@@ -422,16 +459,13 @@ def build(all_nations: list, all_types: list, tf_data: TypeFilterData) -> html.D
     )
 
     return html.Div([
-        # Shared stores
         dcc.Store(id="store-meta-df"),
         dcc.Store(id="store-meta-filters"),
         dcc.Store(id="store-selected-vehicle"),
         dcc.Store(id="store-history", data=[]),
 
-        # Модальное окно карточки
         vehicle_modal,
 
-        # Top bar
         html.Div(id="topbar", children=[
             html.Span("🛡️", style={"fontSize": "1.5rem"}),
             html.H3("WT META CENTER"),
@@ -439,7 +473,6 @@ def build(all_nations: list, all_types: list, tf_data: TypeFilterData) -> html.D
             html.Div(id="history-widget", style={"marginLeft": "auto"}),
         ]),
 
-        # Two-column layout: sidebar + content
         dbc.Row([
             dbc.Col(_sidebar(all_nations, tf_data), width=3, xl=2, style={"padding": 0}),
             dbc.Col([
@@ -448,7 +481,7 @@ def build(all_nations: list, all_types: list, tf_data: TypeFilterData) -> html.D
                     dbc.Tab(_tab_redbook(all_nations),       label="💀 Красная Книга",      tab_id="tab-redbook"),
                     dbc.Tab(_tab_brackets(),                 label="📊 БР Кронштейны",      tab_id="tab-brackets"),
                     dbc.Tab(_tab_farm(all_nations, tf_data), label="⚙️ Конструктор Сетапа", tab_id="tab-farm"),
-                    dbc.Tab(_tab_progression(all_nations), label="🗺 Прогрессия", tab_id="tab-progression"),
+                    dbc.Tab(_tab_progression(all_nations),   label="🗺 Прогрессия",          tab_id="tab-progression"),
                 ], style={"marginTop": "6px"}),
             ], width=9, xl=10, style={"padding": "8px 16px"}),
         ], style={"margin": 0, "flexWrap": "nowrap"}),

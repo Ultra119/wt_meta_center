@@ -1,6 +1,3 @@
-"""
-Колбэки вкладки 📊 БР Кронштейны.
-"""
 import json
 from dash import Input, Output, State, html
 import dash_bootstrap_components as dbc
@@ -17,7 +14,7 @@ def register(app, core, all_types, tf_data) -> None:
     init(all_types, tf_data)
 
     # ── Блокировка Топ-N при «Все машины» ─────────────────────────────────
-    for _sfx in ("meta", "mm", "nat"):
+    for _sfx in ("meta", "nat"):
         @app.callback(
             Output(f"br-topn-{_sfx}", "disabled"),
             Input(f"br-all-{_sfx}",   "value"),
@@ -48,45 +45,24 @@ def register(app, core, all_types, tf_data) -> None:
     @app.callback(
         Output("br-pivot-meta", "children"),
         Input("br-calc-meta", "n_clicks"),
-        State("br-step-meta",  "value"),
-        State("br-topn-meta",  "value"),
-        State("br-all-meta",   "value"),
-        State("sb-mode",        "value"),
-        State("sb-battles",     "value"),
-        State("sb-classes",     "value"),
-        State("sb-ground",      "value"),
-        State("sb-air",         "value"),
-        State("sb-large-fleet", "value"),
-        State("sb-small-fleet", "value"),
+        State("br-step-meta",    "value"),
+        State("br-topn-meta",    "value"),
+        State("br-all-meta",     "value"),
+        State("br-excl-spaa",    "value"),
+        State("sb-mode",          "value"),
+        State("sb-battles",       "value"),
+        State("sb-classes",       "value"),
+        State("sb-ground",        "value"),
+        State("sb-air",           "value"),
+        State("sb-large-fleet",   "value"),
+        State("sb-small-fleet",   "value"),
         State("store-meta-filters", "data"),
         prevent_initial_call=True,
     )
-    def pivot_meta(_, step, topn, all_veh, mode, battles, classes, ground, air, lf, sf, meta_f_json):
+    def pivot_meta(_, step, topn, all_veh, excl_spaa,
+                   mode, battles, classes, ground, air, lf, sf, meta_f_json):
         return _compute_pivot(
-            core, "meta", step, topn, all_veh,
-            mode, battles, classes, ground, air, lf, sf, meta_f_json,
-        )
-
-    # ── MM pivot ──────────────────────────────────────────────────────────
-    @app.callback(
-        Output("br-pivot-mm", "children"),
-        Input("br-calc-mm", "n_clicks"),
-        State("br-step-mm",    "value"),
-        State("br-topn-mm",    "value"),
-        State("br-all-mm",     "value"),
-        State("sb-mode",        "value"),
-        State("sb-battles",     "value"),
-        State("sb-classes",     "value"),
-        State("sb-ground",      "value"),
-        State("sb-air",         "value"),
-        State("sb-large-fleet", "value"),
-        State("sb-small-fleet", "value"),
-        State("store-meta-filters", "data"),
-        prevent_initial_call=True,
-    )
-    def pivot_mm(_, step, topn, all_veh, mode, battles, classes, ground, air, lf, sf, meta_f_json):
-        return _compute_pivot(
-            core, "mm", step, topn, all_veh,
+            core, step, topn, all_veh, bool(excl_spaa),
             mode, battles, classes, ground, air, lf, sf, meta_f_json,
         )
 
@@ -94,19 +70,21 @@ def register(app, core, all_types, tf_data) -> None:
     @app.callback(
         Output("br-nations-table", "children"),
         Input("br-calc-nat", "n_clicks"),
-        State("br-topn-nat",   "value"),
-        State("br-all-nat",    "value"),
-        State("sb-mode",        "value"),
-        State("sb-battles",     "value"),
-        State("sb-classes",     "value"),
-        State("sb-ground",      "value"),
-        State("sb-air",         "value"),
-        State("sb-large-fleet", "value"),
-        State("sb-small-fleet", "value"),
+        State("br-topn-nat",     "value"),
+        State("br-all-nat",      "value"),
+        State("br-excl-spaa",    "value"),
+        State("sb-mode",          "value"),
+        State("sb-battles",       "value"),
+        State("sb-classes",       "value"),
+        State("sb-ground",        "value"),
+        State("sb-air",           "value"),
+        State("sb-large-fleet",   "value"),
+        State("sb-small-fleet",   "value"),
         State("store-meta-filters", "data"),
         prevent_initial_call=True,
     )
-    def nations(_, topn, all_veh, mode, battles, classes, ground, air, lf, sf, meta_f_json):
+    def nations(_, topn, all_veh, excl_spaa,
+                mode, battles, classes, ground, air, lf, sf, meta_f_json):
         types_list = get_types(ground, air, lf, sf)
         filters    = filters_from_meta_store(meta_f_json, mode, battles, classes)
         df         = core.calculate_meta(filters)
@@ -114,15 +92,33 @@ def register(app, core, all_types, tf_data) -> None:
         if df.empty:
             return dbc.Alert("Нет данных.", color="info")
 
+        if excl_spaa and "Type" in df.columns:
+            df_for_nations = df[df["Type"] != "spaa"]
+        else:
+            df_for_nations = df
+
+        if df_for_nations.empty:
+            return dbc.Alert("Нет данных после фильтрации ЗСУ.", color="info")
+
         top_n = None if all_veh else int(topn or 5)
-        core.display_df = df
+        core.display_df = df_for_nations
         core.settings["top_nations_vehicles"] = 9999 if top_n is None else top_n
         core._calculate_nation_dominance()
         stats = core.nation_stats
         if stats.empty:
             return dbc.Alert("Нет данных.", color="info")
 
-        return dash_table.DataTable(
+        # Подпись: информируем пользователя об активном фильтре
+        spaa_note = (
+            html.Div(
+                "⚡ ЗСУ исключены из расчёта Power Score",
+                style={"fontSize": "0.72rem", "color": "#64748b",
+                       "marginBottom": "6px"},
+            )
+            if excl_spaa else None
+        )
+
+        table = dash_table.DataTable(
             data=stats.round(2).to_dict("records"),
             columns=[
                 {"name": "Нация",       "id": "Nation"},
@@ -168,9 +164,10 @@ def register(app, core, all_types, tf_data) -> None:
             sort_by=[{"column_id": "Power_Score", "direction": "desc"}],
         )
 
+        return html.Div([spaa_note, table] if spaa_note else [table])
 
 # ── Shared helper ─────────────────────────────────────────────────────────────
-def _compute_pivot(core, kind, step, topn, all_veh,
+def _compute_pivot(core, step, topn, all_veh, exclude_spaa,
                    mode, battles, classes, ground, air, lf, sf, meta_f_json):
     types_list = get_types(ground, air, lf, sf)
     filters    = filters_from_meta_store(meta_f_json, mode, battles, classes)
@@ -183,9 +180,9 @@ def _compute_pivot(core, kind, step, topn, all_veh,
     top_n = None if all_veh else int(topn or 5)
     core.display_df = df
 
-    if kind == "meta":
-        result = core.get_bracket_stats(int(step or 1), top_n=top_n)
-    else:
-        result = core.get_mm_context(int(step or 1), top_n=top_n)
-
+    result = core.get_bracket_stats(
+        int(step or 1),
+        top_n=top_n,
+        exclude_spaa=exclude_spaa,
+    )
     return pivot_table(result)

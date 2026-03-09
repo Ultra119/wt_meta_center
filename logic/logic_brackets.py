@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pandas as pd
 
 try:
@@ -19,8 +21,9 @@ except ImportError:
         13.0,
     ]
 
+_SPAA_TYPE: str   = "spaa"
 
-def _build_wt_brackets(wt_steps_per_bracket: int) -> tuple:
+def _build_wt_brackets(wt_steps_per_bracket: int) -> tuple[list, list]:
     step = max(1, wt_steps_per_bracket)
     n    = len(WT_BR_STEPS)
 
@@ -29,7 +32,6 @@ def _build_wt_brackets(wt_steps_per_bracket: int) -> tuple:
         boundary_indices.append(n - 1)
 
     boundary_brs = [WT_BR_STEPS[i] for i in boundary_indices]
-
     bins = boundary_brs[:-1] + [boundary_brs[-1] + 0.01]
 
     if step == 1:
@@ -42,61 +44,38 @@ def _build_wt_brackets(wt_steps_per_bracket: int) -> tuple:
 
     return bins, labels
 
-
-def get_mm_context(
-    display_df: "pd.DataFrame",
-    wt_steps_per_bracket: int = 1,
-    top_n: "int | None" = None,
-) -> "pd.DataFrame":
-    if display_df.empty:
-        return pd.DataFrame()
-
-    df = display_df.copy()
-    bins, labels = _build_wt_brackets(wt_steps_per_bracket)
-    df["BR_Bracket"] = pd.cut(
-        df["BR"], bins=bins, labels=labels, right=False, include_lowest=True
-    )
-
-    def bracket_gain_score(g: pd.DataFrame) -> float:
-        if g.empty:
-            return 0.0
-        top = g if top_n is None else g.nlargest(top_n, "META_SCORE")
-        br_range = g["BR"].max() - g["BR"].min() + 0.01
-        gain_factor = float(top["BR"].mean() - g["BR"].min()) / br_range
-        return float(top["META_SCORE"].mean() * (0.7 + 0.3 * gain_factor))
-
-    context = (
-        df.groupby(["BR_Bracket", "Nation"], observed=True)
-          .apply(bracket_gain_score, include_groups=False)
-          .reset_index(name="MM_Score")
-    )
-    pivot = context.pivot(index="BR_Bracket", columns="Nation", values="MM_Score")
-    return pivot.fillna(0).round(1)
-
+def _weighted_meta(pool: pd.DataFrame) -> float:
+    if pool.empty:
+        return 0.0
+    w = pool["Сыграно игр"].clip(lower=1)
+    return float((pool["META_SCORE"] * w).sum() / w.sum())
 
 def get_bracket_stats(
     display_df: pd.DataFrame,
     wt_steps_per_bracket: int = 3,
-    top_n: "int | None" = None,
+    top_n: int | None = None,
+    exclude_spaa: bool = False,
 ) -> pd.DataFrame:
     if display_df.empty:
         return pd.DataFrame()
 
     df = display_df.copy()
 
-    bins, labels = _build_wt_brackets(wt_steps_per_bracket)
+    if exclude_spaa and "Type" in df.columns:
+        df = df[df["Type"] != _SPAA_TYPE]
+    if df.empty:
+        return pd.DataFrame()
 
+    bins, labels = _build_wt_brackets(wt_steps_per_bracket)
     df["BR_Bracket"] = pd.cut(
-        df["BR"],
-        bins=bins,
-        labels=labels,
-        right=False,
-        include_lowest=True,
+        df["BR"], bins=bins, labels=labels, right=False, include_lowest=True,
     )
 
     def bracket_nation_score(g: pd.DataFrame) -> float:
+        if g.empty:
+            return 0.0
         pool = g if top_n is None else g.nlargest(top_n, "META_SCORE")
-        return pool["META_SCORE"].mean()
+        return _weighted_meta(pool)
 
     bracket = (
         df.groupby(["BR_Bracket", "Nation"], observed=True)
