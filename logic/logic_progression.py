@@ -504,54 +504,31 @@ def build_progression_data(
         if candidates.empty:
             continue
 
-        filled = 0
+        must_brs = grp_meta.loc[
+            grp_meta["Verdict"] == VERDICT_MUST, "BR"
+        ].tolist()
+
+        filtered_candidates = []
         for fill_idx in candidates.index:
+            cand_br = float(candidates.at[fill_idx, "BR"])
+            nearby_must = any(
+                abs(cand_br - mbr) <= _BR_FILL_WINDOW
+                for mbr in must_brs
+            )
+            if not nearby_must:
+                filtered_candidates.append(fill_idx)
+
+        if not filtered_candidates:
+            continue
+
+        filled = 0
+        for fill_idx in filtered_candidates:
             if filled >= need:
                 break
             std_df.at[fill_idx, "Verdict"]     = VERDICT_FILL
             std_df.at[fill_idx, "Skip_Reason"] = ""
             std_df.at[fill_idx, "Alt_Vehicle"] = ""
             filled += 1
-
-    std_df.drop(columns=["_super_cat"], errors="ignore", inplace=True)
-    _BR_STAY_THRESHOLD = 1.15
-
-    std_df["_super_cat"] = std_df["_branch"].apply(_super_cat)
-
-    for (branch, era), grp in std_df.groupby(["_branch", "_era_int"]):
-        era_int  = int(era)
-        grp_meta = grp.assign(
-            META_SCORE=pd.to_numeric(grp["META_SCORE"], errors="coerce").fillna(0)
-        )
-        anchors = grp_meta[grp_meta["Verdict"].isin([VERDICT_MUST, VERDICT_FILL])]
-        if anchors.empty:
-            continue
-
-        anchor_scores: list[tuple[float, float, int]] = []
-        for idx, row in anchors.iterrows():
-            br = float(row["BR"])
-            ls = _lineup_score(grp_meta, br, junk_thresh, min_lineup)
-            anchor_scores.append((br, ls, idx))
-
-        # Сортируем по BR
-        anchor_scores.sort(key=lambda x: x[0])
-
-        for i, (br, ls, idx) in enumerate(anchor_scores):
-            # Есть ли якорь с более высоким BR в том же ранге?
-            higher = [(b, s, ix) for b, s, ix in anchor_scores if b > br]
-            if not higher:
-                continue
-
-            best_higher_br, best_higher_ls, _ = max(higher, key=lambda x: x[1])
-
-            # Текущая позиция значимо лучше лучшей из более высоких
-            if ls > best_higher_ls * _BR_STAY_THRESHOLD:
-                existing = str(std_df.at[idx, "Forward_Hint"] or "")
-                if not existing:
-                    std_df.at[idx, "Forward_Hint"] = (
-                        f"Оптимальный BR в ранге — не торопись на {best_higher_br:.1f}, "
-                        f"здесь линейка сильнее ({ls:.0f} vs {best_higher_ls:.0f})"
-                    )
 
     std_df.drop(columns=["_super_cat"], errors="ignore", inplace=True)
 
