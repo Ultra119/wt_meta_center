@@ -648,15 +648,30 @@ def register(app, core, all_nations, all_types, tf_data) -> None:
         n_prem  = int((prog_df["Verdict"] == VERDICT_PREM).sum())
         total   = len(prog_df)
 
+        def _badge(text, color, bg):
+            return html.Span(text, style={
+                "display":         "inline-block",
+                "backgroundColor": bg,
+                "color":           color,
+                "borderRadius":    "4px",
+                "padding":         "2px 7px",
+                "fontSize":        "11px",
+                "fontWeight":      "600",
+                "fontFamily":      "JetBrains Mono, monospace",
+                "marginRight":     "4px",
+                "whiteSpace":      "nowrap",
+            })
+
         flag = _NATION_FLAG.get(nation.lower(), "🏴")
-        info = html.Span([
-            html.B(f"{flag} {nation.title()}"),
-            f"  ·  {branch}  ·  всего {total} машин  ·  ",
-            html.Span(f"🟢 {n_must} Must  ",  style={"color": "#10b981"}),
-            html.Span(f"🔵 {n_fill} Fill  ",  style={"color": "#38bdf8"}),
-            html.Span(f"🔴 {n_skip} Skip  ",  style={"color": "#f87171"}),
-            html.Span(f"👑 {n_prem} Prem",    style={"color": "#a78bfa"}),
-        ], style={"fontSize": "0.75rem", "color": "#94a3b8"})
+        info = html.Div([
+            _badge(f"{flag} {nation.title()} · {branch}",
+                   "#94a3b8", "rgba(148,163,184,0.10)"),
+            _badge(f"📋 {total}",   "#94a3b8", "rgba(148,163,184,0.10)"),
+            _badge(f"🟢 {n_must}",  "#10b981", "rgba(16,185,129,0.12)"),
+            _badge(f"🔵 {n_fill}",  "#38bdf8", "rgba(56,189,248,0.12)"),
+            _badge(f"🔴 {n_skip}",  "#f87171", "rgba(248,113,113,0.12)"),
+            _badge(f"👑 {n_prem}",  "#a78bfa", "rgba(167,139,250,0.12)"),
+        ], style={"display": "flex", "flexWrap": "wrap", "gap": "2px"})
 
         # Единая сетка: std + premium + event в одном CSS grid
         grid = _build_unified_grid(std_df, prem_df)

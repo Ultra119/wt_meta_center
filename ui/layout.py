@@ -335,86 +335,103 @@ def _tab_farm(all_nations: list, tf_data: TypeFilterData) -> html.Div:
 
 def _tab_progression(all_nations: list) -> html.Div:
     nations_no_all = [n for n in all_nations if n != "All"]
+
+    _sep = html.Div(style={
+        "width": "1px", "alignSelf": "stretch",
+        "background": "#1e293b", "margin": "0 16px", "flexShrink": "0",
+    })
+
     return html.Div([
-        dbc.Row([
-            dbc.Col([
+        html.Div([
+
+            html.Div([
                 html.Div("Нация", className="section-label"),
                 dcc.Dropdown(
                     id="prog-nation",
                     options=[{"label": n, "value": n} for n in nations_no_all],
                     value=nations_no_all[0] if nations_no_all else None,
                     clearable=False, searchable=False,
+                    style={"minWidth": "140px"},
                 ),
-            ], width=3),
-            dbc.Col([
-                html.Div("Ветка техники", className="section-label"),
-                dbc.RadioItems(
-                    id="prog-branch",
-                    options=[
-                        {"label": "🚜 Наземка",  "value": "Ground"},
-                        {"label": "✈️ Авиация",  "value": "Aviation"},
-                        {"label": "⚓ Флот",     "value": "Fleet"},
-                    ],
-                    value="Ground",
-                    inline=True,
-                    inputStyle={"marginRight": "5px", "marginLeft": "12px"},
-                    labelStyle={"color": "#e2e8f0", "fontSize": "13px"},
-                ),
-            ], width=4),
-            dbc.Col([
-                html.Div("Слоты в сетапе", className="section-label"),
-                dbc.RadioItems(
-                    id="prog-slots",
-                    options=[
-                        {"label": "3", "value": 3},
-                        {"label": "4", "value": 4},
-                        {"label": "5", "value": 5},
-                    ],
-                    value=4,
-                    inline=True,
-                    inputStyle={"marginRight": "4px", "marginLeft": "10px"},
-                    labelStyle={"color": "#e2e8f0", "fontSize": "13px"},
-                ),
-            ], width=2),
-            dbc.Col([
-                html.Div(id="prog-info", className="caption-text"),
-            ], width=3),
-        ], className="panel mb-2"),
-        dbc.Row([
-            dbc.Col([
-                html.Div("Играю на типах", className="section-label"),
-                dbc.Checklist(
-                    id="prog-type-toggles",
-                    options=[],
-                    value=[],
-                    inline=True,
-                    inputStyle={"marginRight": "4px", "marginLeft": "10px"},
-                    labelStyle={"color": "#e2e8f0", "fontSize": "12px"},
-                ),
-            ], width=12),
-        ], className="panel mb-3"),
+            ], style={"flexShrink": "0", "width": "155px"}),
+
+            _sep,
+
+            html.Div([
+                html.Div([
+                    html.Div("Ветка", className="section-label"),
+                    dbc.RadioItems(
+                        id="prog-branch",
+                        options=[
+                            {"label": "🚜 Наземка",  "value": "Ground"},
+                            {"label": "✈️ Авиация",  "value": "Aviation"},
+                            {"label": "⚓ Флот",     "value": "Fleet"},
+                        ],
+                        value="Ground",
+                        inline=True,
+                        inputStyle={"marginRight": "4px", "marginLeft": "12px"},
+                        labelStyle={"color": "#e2e8f0", "fontSize": "13px"},
+                    ),
+                ]),
+                html.Div([
+                    html.Div("Типы", className="section-label",
+                             style={"marginTop": "7px"}),
+                    dbc.Checklist(
+                        id="prog-type-toggles",
+                        options=[],
+                        value=[],
+                        inline=True,
+                        inputStyle={"marginRight": "3px", "marginLeft": "10px"},
+                        labelStyle={"color": "#94a3b8", "fontSize": "11px"},
+                    ),
+                ]),
+            ], style={"flex": "1", "minWidth": "0"}),
+
+            _sep,
+
+            html.Div([
+                html.Div([
+                    html.Div("Слоты", className="section-label"),
+                    dbc.RadioItems(
+                        id="prog-slots",
+                        options=[
+                            {"label": "3", "value": 3},
+                            {"label": "4", "value": 4},
+                            {"label": "5", "value": 5},
+                        ],
+                        value=4,
+                        inline=True,
+                        inputStyle={"marginRight": "4px", "marginLeft": "10px"},
+                        labelStyle={"color": "#e2e8f0", "fontSize": "13px"},
+                    ),
+                ]),
+                html.Div(id="prog-info", style={"marginTop": "8px"}),
+            ], style={"flexShrink": "0"}),
+
+        ], className="panel mb-2", style={
+            "display":    "flex",
+            "alignItems": "flex-start",
+            "padding":    "10px 14px",
+        }),
+
         html.Div([
-            html.Span([
-                html.Span("🟢", style={"marginRight": "3px"}),
-                html.Span("Must Play",   style={"color": "#94a3b8"}),
-            ], style={"marginRight": "14px", "fontSize": "11px"}),
-            html.Span([
-                html.Span("🔵", style={"marginRight": "3px"}),
-                html.Span("Lineup Filler",   style={"color": "#94a3b8"}),
-            ], style={"marginRight": "14px", "fontSize": "11px"}),
-            html.Span([
-                html.Span("🟡", style={"marginRight": "3px"}),
-                html.Span("Passable",       style={"color": "#94a3b8"}),
-            ], style={"marginRight": "14px", "fontSize": "11px"}),
-            html.Span([
-                html.Span("🔴", style={"marginRight": "3px"}),
-                html.Span("Hard Skip",      style={"color": "#94a3b8"}),
-            ], style={"marginRight": "14px", "fontSize": "11px"}),
-            html.Span([
-                html.Span("👑", style={"marginRight": "3px"}),
-                html.Span("Premium Fix",    style={"color": "#94a3b8"}),
-            ], style={"fontSize": "11px"}),
+            html.Span([html.Span("🟢", style={"marginRight": "3px"}),
+                       html.Span("Must Play",     style={"color": "#94a3b8"})],
+                      style={"marginRight": "14px", "fontSize": "11px"}),
+            html.Span([html.Span("🔵", style={"marginRight": "3px"}),
+                       html.Span("Lineup Filler", style={"color": "#94a3b8"})],
+                      style={"marginRight": "14px", "fontSize": "11px"}),
+            html.Span([html.Span("🟡", style={"marginRight": "3px"}),
+                       html.Span("Passable",      style={"color": "#94a3b8"})],
+                      style={"marginRight": "14px", "fontSize": "11px"}),
+            html.Span([html.Span("🔴", style={"marginRight": "3px"}),
+                       html.Span("Hard Skip",     style={"color": "#94a3b8"})],
+                      style={"marginRight": "14px", "fontSize": "11px"}),
+            html.Span([html.Span("👑", style={"marginRight": "3px"}),
+                       html.Span("Premium Fix",   style={"color": "#94a3b8"})],
+                      style={"fontSize": "11px"}),
         ], style={"marginBottom": "10px", "padding": "0 2px"}),
+
         dcc.Loading(
             id="loading-prog",
             type="dot", color="#10b981",
