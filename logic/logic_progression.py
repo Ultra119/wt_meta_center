@@ -255,6 +255,16 @@ def build_progression_data(
     if "META_SCORE" in std_df.columns:
         std_df["Local_Score"] = pd.to_numeric(std_df["META_SCORE"], errors="coerce").fillna(0)
 
+    _era_junk: dict[int, float] = {}
+    if not std_df.empty:
+        _era_meta_col = pd.to_numeric(
+            std_df.get("META_SCORE", pd.Series(dtype=float)), errors="coerce"
+        ).fillna(0)
+        for _era_key, _era_sub in std_df.groupby("_era_int"):
+            _sub_meta = _era_meta_col.loc[_era_sub.index]
+            local_junk, _, _ = _compute_dynamic_thresholds(_sub_meta)
+            _era_junk[int(_era_key)] = local_junk
+
     # ── Проход 1: MUST / PASS / SKIP ─────────────────────────────────────────
     has_groups = "vdb_shop_group" in std_df.columns
 
@@ -307,10 +317,11 @@ def build_progression_data(
                 std_df.at[row_idx, "Verdict"]     = VERDICT_SKIP
                 std_df.at[row_idx, "Skip_Reason"] = reason
                 std_df.at[row_idx, "Alt_Vehicle"] = alt_name
-            elif not no_data and loc_s < _SKIP_MAX_META:
+            elif not no_data and loc_s < _era_junk.get(era, _SKIP_MAX_META):
+                _thr = _era_junk.get(era, _SKIP_MAX_META)
                 std_df.at[row_idx, "Verdict"]     = VERDICT_SKIP
                 std_df.at[row_idx, "Skip_Reason"] = (
-                    f"Слабая техника (META {loc_s:.0f} < {_SKIP_MAX_META:.0f})"
+                    f"Слабая техника (META {loc_s:.0f} < {_thr:.0f})"
                 )
             else:
                 qualifies_must = (
@@ -324,6 +335,7 @@ def build_progression_data(
     _CROSS_THRESHOLD      = 1.30
     _CROSS_SKIP_THRESHOLD = 1.40
     _CROSS_BR_WINDOW      = 0.7
+    _CROSS_BR_LOOK_BACK   = 1.0
     _NO_CROSS_BRANCHES    = {"spaa"}
 
     std_df["_super_cat"] = std_df["_branch"].apply(_super_cat)
@@ -350,7 +362,7 @@ def build_progression_data(
                 (std_df["_branch"]    != our_branch) &
                 (std_df["_super_cat"] == our_cat) &
                 (std_df["_era_int"]   == our_era) &
-                (std_df["BR"]         >= our_br - _CROSS_BR_WINDOW) &
+                (std_df["BR"]         >= our_br - _CROSS_BR_LOOK_BACK) &
                 (std_df["BR"]         <= our_br + _CROSS_BR_WINDOW) &
                 (std_df["Verdict"]    != VERDICT_SKIP)
             )
@@ -372,7 +384,11 @@ def build_progression_data(
                 cur_v = std_df.at[row_idx, "Verdict"]
                 if cur_v == VERDICT_MUST:
                     std_df.at[row_idx, "Verdict"] = VERDICT_PASS
-                elif cur_v == VERDICT_PASS and best_cross_meta > our_meta * _CROSS_SKIP_THRESHOLD:
+                elif (
+                    cur_v == VERDICT_PASS
+                    and best_cross_meta > our_meta * _CROSS_SKIP_THRESHOLD
+                    and best_cross_br < our_br
+                ):
                     std_df.at[row_idx, "Verdict"]     = VERDICT_SKIP
                     std_df.at[row_idx, "Skip_Reason"] = (
                         f"Лучше качать «{best_cross_name}» ({best_cross_br:.1f}) "
