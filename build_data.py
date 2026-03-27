@@ -50,6 +50,7 @@ _KEEP_COLS = [
     # Shop-дерево (для ProgressionTab)
     "vdb_shop_column","vdb_shop_row","vdb_shop_nation","vdb_shop_branch",
     "vdb_shop_order","vdb_req_exp","vdb_value","vdb_required_vehicle",
+    "vdb_shop_group",
     "vdb_crew_total_count","vdb_visibility","vdb_mass",
     # Матч-скор
     "vdb_match_score",
