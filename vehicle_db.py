@@ -6,11 +6,6 @@ from typing import Optional
 
 import pandas as pd
 
-try:
-    from analytics.units_csv import UnitsCsvTranslator as _UnitsCsvTranslator
-except ImportError:
-    _UnitsCsvTranslator = None
-
 
 # ── JSON helpers ──────────────────────────────────────────────────────────────
 
@@ -247,11 +242,6 @@ class VehicleDB:
         )
 
     def _load(self, path: str) -> None:
-        dataset_dir = os.path.dirname(os.path.abspath(path)) if path else ""
-
-        if _UnitsCsvTranslator is not None:
-            self._units = _UnitsCsvTranslator(dataset_dir)
-
         if not os.path.exists(path):
             print(f"[VehicleDB] ⚠️  vehicles.json не найден: {path}")
             return

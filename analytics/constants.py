@@ -95,11 +95,3 @@ DEFAULT_SETTINGS: dict = {
 def snap_to_wt_br(br: float) -> float:
     """Округляет произвольный BR к ближайшему реальному значению War Thunder."""
     return min(WT_BR_STEPS, key=lambda x: abs(x - br))
-
-def wt_br_index(br: float) -> int:
-    """Возвращает индекс snap-нутого BR в списке WT_BR_STEPS."""
-    snapped = snap_to_wt_br(br)
-    try:
-        return WT_BR_STEPS.index(snapped)
-    except ValueError:
-        return 0

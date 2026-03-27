@@ -33,15 +33,3 @@ def load_settings(script_dir: str) -> dict:
     except Exception as e:
         log_debug(f"Ошибка чтения settings.json, используются дефолты: {e}")
         return dict(DEFAULT_SETTINGS)
-
-
-def save_settings(script_dir: str, settings: dict) -> bool:
-    settings_path = os.path.join(script_dir, "settings.json")
-    try:
-        with open(settings_path, "w", encoding="utf-8") as f:
-            json.dump(settings, f, ensure_ascii=False, indent=4)
-        log_debug("settings.json сохранён.")
-        return True
-    except Exception as e:
-        log_debug(f"Не удалось сохранить settings.json: {e}")
-        return False
