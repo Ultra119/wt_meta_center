@@ -24,7 +24,7 @@
           <span class="sidebar-value">{{ store.brRange[0].toFixed(1) }} – {{ store.brRange[1].toFixed(1) }}</span>
         </div>
         <v-range-slider
-          v-model="store.brRange"
+          :model-value="store.brRange"
           :min="store.BR_MIN"
           :max="store.BR_MAX"
           :step="0.1"
@@ -32,22 +32,22 @@
           track-color="#1e293b"
           density="compact"
           class="mt-1"
+          @update:model-value="v => store.brRange = v.map(snapBR)"
         />
       </div>
 
       <!-- Минимум боёв -->
       <div class="sidebar-section">
-        <div class="sidebar-label">
-          {{ t('sidebar.min_battles') }}
-          <span class="sidebar-value">{{ store.minBattles }}</span>
-        </div>
-        <v-slider
-          v-model="store.minBattles"
-          :min="0" :max="500" :step="10"
-          color="secondary"
-          track-color="#1e293b"
+        <div class="sidebar-label">{{ t('sidebar.min_battles') }}</div>
+        <v-text-field
+          v-model.number="store.minBattles"
+          type="number"
+          min="0"
+          step="100"
           density="compact"
-          class="mt-1"
+          variant="outlined"
+          hide-details
+          class="mt-1 battles-input"
         />
       </div>
 
@@ -106,6 +106,15 @@ const store  = useDataStore()
 
 const ALL_CLASSES = ['Standard','Premium','Pack','Squadron','Marketplace','Gift','Event']
 
+function snapBR(val) {
+  const base = Math.floor(val)
+  const frac = val - base
+  const snapped = [0, 0.3, 0.7].reduce((best, f) =>
+    Math.abs(frac - f) < Math.abs(frac - best) ? f : best
+  , 0)
+  return parseFloat((base + snapped).toFixed(1))
+}
+
 const mixWarning = computed(() => {
   const fleet  = store.showLargeFleet || store.showSmallFleet
   const ground = store.showGround     || store.showAviation
@@ -145,10 +154,10 @@ const generatedDate = computed(() => {
 .class-cb :deep(.v-label) { font-size: 11px; color: #94a3b8; }
 .type-grid { display: flex; flex-direction: column; }
 .type-cb :deep(.v-label) { font-size: 12px; color: #e2e8f0; }
-.sidebar-info {
+.battles-input { max-width: 120px; }
+.battles-input :deep(input) {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  color: #334155;
-  line-height: 1.8;
+  font-size: 13px;
+  color: #a7f3d0;
 }
 </style>
