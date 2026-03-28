@@ -21,9 +21,10 @@ export default defineConfig({
     outDir: 'dist',
     rollupOptions: {
       output: {
-        manualChunks: {
-          vuetify: ['vuetify'],
-          vendor:  ['vue', 'vue-router', 'pinia', 'vue-i18n'],
+        manualChunks(id) {
+          if (id.includes('vuetify'))                                    return 'vuetify'
+          if (id.includes('vue-router') || id.includes('vue-i18n') ||
+              id.includes('pinia')      || id.includes('/vue/'))        return 'vendor'
         },
       },
     },
