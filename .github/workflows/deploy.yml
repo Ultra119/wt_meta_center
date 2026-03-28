@@ -37,7 +37,7 @@ jobs:
 
       - name: Vite build
         working-directory: frontend
-        run: npm run build
+        run: VITE_BASE_PATH=/wt_meta_center/ npm run build
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
