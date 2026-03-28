@@ -27,7 +27,11 @@
       </v-tabs>
 
       <div class="pa-4">
-        <router-view />
+        <router-view v-slot="{ Component }">
+          <keep-alive>
+            <component :is="Component" />
+          </keep-alive>
+        </router-view>
       </div>
     </v-main>
 
