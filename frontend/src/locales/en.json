@@ -189,6 +189,15 @@
     "prem": "Premium Fix"
   },
 
+  "disclaimer": {
+    "title":  "Data Disclaimer",
+    "body_1": "WT META Center is an independent community tool. Statistics are based on community-aggregated gameplay data. Vehicle characteristics and progression data are sourced from the publicly available War Thunder Datamine project. Scores (META, FARM) are calculated estimates produced by custom statistical models — they are approximations, not ground truth.",
+    "body_2": "Data may be outdated, incomplete, or statistically biased due to sample size, game patches, or collection methodology. Use this tool for reference and entertainment purposes only.",
+    "legal":  "This project is not affiliated with, endorsed by, or connected to Gaijin Entertainment in any way.'War Thunder' is a trademark of Gaijin Entertainment. By continuing, you accept that all information is provided 'as-is' without any warranty.",
+    "note":   "This notice is shown once. You can revisit the source code at any time.",
+    "accept": "I understand, continue"
+  },
+
   "modes": {
     "Realistic":  "RB",
     "Arcade":     "AB",

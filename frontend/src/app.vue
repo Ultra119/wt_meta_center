@@ -36,6 +36,7 @@
     </v-main>
 
     <VehicleCard v-model="modalOpen" :vehicle="selectedVehicle" />
+    <DisclaimerModal v-model="disclaimerVisible" @accept="acceptDisclaimer" />
   </v-app>
 </template>
 
@@ -45,7 +46,8 @@ import { useI18n } from 'vue-i18n'
 import { useDataStore } from './stores/useDataStore.js'
 import TopBar      from './components/TopBar.vue'
 import SideBar     from './components/SideBar.vue'
-import VehicleCard from './components/VehicleCard.vue'
+import VehicleCard      from './components/VehicleCard.vue'
+import DisclaimerModal from './components/DisclaimerModal.vue'
 
 const { t } = useI18n()
 const store  = useDataStore()
@@ -69,6 +71,13 @@ function openVehicle(v) {
 }
 
 provide('openVehicle', openVehicle)
+
+const DISCLAIMER_KEY     = 'wt_disclaimer_accepted'
+const disclaimerVisible  = ref(!localStorage.getItem(DISCLAIMER_KEY))
+function acceptDisclaimer() {
+  localStorage.setItem(DISCLAIMER_KEY, '1')
+  disclaimerVisible.value = false
+}
 
 onMounted(() => {
   const base = import.meta.env.BASE_URL.replace(/\/$/, '')
