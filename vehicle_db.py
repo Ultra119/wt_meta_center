@@ -6,6 +6,8 @@ from typing import Optional
 
 import pandas as pd
 
+from analytics.units_csv import UnitsCsvTranslator
+
 
 # ── JSON helpers ──────────────────────────────────────────────────────────────
 
@@ -183,6 +185,8 @@ def _build_vdb_row(v: dict) -> dict:
     row["vdb_required_vehicle"] = str(v.get("required_vehicle", "") or "")
     row["vdb_version"]          = str(v.get("version",          "") or "")
 
+    row["vdb_display_name"] = ""
+
     # Shop tree position — заполняется позже через _load_shop()
     row["vdb_shop_column"] = -1
     row["vdb_shop_row"]    = -1
@@ -200,13 +204,37 @@ def _build_vdb_row(v: dict) -> dict:
 class VehicleDB:
     def __init__(self, vehicles_json_path: str) -> None:
         self._index: dict[str, dict] = {}
-        self._units = None
+
+        dataset_dir = (
+            os.path.dirname(os.path.abspath(vehicles_json_path))
+            if vehicles_json_path else ""
+        )
+
+        self._units: UnitsCsvTranslator = UnitsCsvTranslator(dataset_dir)
+
         self._load(vehicles_json_path)
 
         if vehicles_json_path:
-            dataset_dir = os.path.dirname(os.path.abspath(vehicles_json_path))
-            shop_path   = os.path.join(dataset_dir, "shop.blkx")
+            shop_path = os.path.join(dataset_dir, "shop.blkx")
             self._load_shop(shop_path)
+
+        self._apply_display_names()
+
+    def _apply_display_names(self) -> None:
+        if not self._units.loaded:
+            return
+
+        enriched = 0
+        for identifier, row in self._index.items():
+            name = self._units.find_name(identifier)
+            if name:
+                row["vdb_display_name"] = name
+                enriched += 1
+
+        print(
+            f"[VehicleDB] 📛 Display names из units.csv: "
+            f"{enriched}/{len(self._index)} совпадений"
+        )
 
     def _load_shop(self, path: str) -> None:
         try:
@@ -240,6 +268,7 @@ class VehicleDB:
             f"[VehicleDB] 🗺️  Shop-позиции: "
             f"обновлено {updated}/{len(shop)} записей в индексе"
         )
+
 
     def _load(self, path: str) -> None:
         if not os.path.exists(path):
@@ -292,6 +321,8 @@ class VehicleDB:
             return df
 
         for k, val in sample.items():
+            if k == "vdb_display_name":
+                continue
             if isinstance(val, bool):    df[k] = False
             elif isinstance(val, int):   df[k] = 0
             elif isinstance(val, float): df[k] = 0.0
@@ -303,10 +334,17 @@ class VehicleDB:
         for idx, row in df.iterrows():
             uid = str(row.get("id", "") or "")
             vdb_row = cache.get(uid)
-            if vdb_row:
-                df.at[idx, "vdb_match_score"] = 1.0
-                for vdb_k in sample.keys():
-                    df.at[idx, vdb_k] = vdb_row.get(vdb_k)
+            if not vdb_row:
+                continue
+
+            df.at[idx, "vdb_match_score"] = 1.0
+
+            for vdb_k, vdb_v in vdb_row.items():
+                if vdb_k == "vdb_display_name":
+                    if vdb_v and "Name" in df.columns:
+                        df.at[idx, "Name"] = vdb_v
+                else:
+                    df.at[idx, vdb_k] = vdb_v
 
         matched = int((df["vdb_match_score"] > 0).sum())
         total   = len(df)
@@ -315,7 +353,8 @@ class VehicleDB:
 
         if matched < total:
             missing_ids = [
-                str(row["id"]) for _, row in df[df["vdb_match_score"] == 0].iterrows()
+                str(row["id"])
+                for _, row in df[df["vdb_match_score"] == 0].iterrows()
                 if str(row.get("id", ""))
             ]
             if missing_ids:

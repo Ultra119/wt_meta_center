@@ -72,12 +72,9 @@ def clean_dataframe(df: pd.DataFrame, vehicle_db) -> pd.DataFrame:
         df["Type"] = df["_dir_category"] if "_dir_category" in df.columns else "Uncategorized"
 
     if "Name" in df.columns:
-        df["Name"] = (
-            df["Name"]
-            .astype(str)
-            .str.replace('""', '"', regex=False)
-            .str.replace(r'(\w)"(\w)', r'\1 "\2', regex=True)
-        )
+        df["Name"] = df["Name"].astype(str)
+    else:
+        df["Name"] = ""
 
     df["Category"] = df["Type"].map(VEHICLE_TYPE_CATEGORY).fillna("Uncategorized")
 
