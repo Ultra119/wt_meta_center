@@ -55,20 +55,24 @@
             <div class="card-section">
               <div class="section-title">{{ t('vehicle_card.armor') }}</div>
               <table class="armor-table">
-                <tr>
-                  <th></th>
-                  <th>{{ t('vehicle_card.armor_front') }}</th>
-                  <th>{{ t('vehicle_card.armor_side')  }}</th>
-                  <th>{{ t('vehicle_card.armor_rear')  }}</th>
-                </tr>
-                <tr>
-                  <td class="armor-label">{{ t('vehicle_card.armor_hull')   }}</td>
-                  <td>{{ v('vdb_hull_front')  }}</td><td>{{ v('vdb_hull_side')  }}</td><td>{{ v('vdb_hull_rear')  }}</td>
-                </tr>
-                <tr>
-                  <td class="armor-label">{{ t('vehicle_card.armor_turret') }}</td>
-                  <td>{{ v('vdb_turret_front') }}</td><td>{{ v('vdb_turret_side') }}</td><td>{{ v('vdb_turret_rear') }}</td>
-                </tr>
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th>{{ t('vehicle_card.armor_front') }}</th>
+                    <th>{{ t('vehicle_card.armor_side')  }}</th>
+                    <th>{{ t('vehicle_card.armor_rear')  }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="armor-label">{{ t('vehicle_card.armor_hull')   }}</td>
+                    <td>{{ v('vdb_hull_front')  }}</td><td>{{ v('vdb_hull_side')  }}</td><td>{{ v('vdb_hull_rear')  }}</td>
+                  </tr>
+                  <tr>
+                    <td class="armor-label">{{ t('vehicle_card.armor_turret') }}</td>
+                    <td>{{ v('vdb_turret_front') }}</td><td>{{ v('vdb_turret_side') }}</td><td>{{ v('vdb_turret_rear') }}</td>
+                  </tr>
+                </tbody>
               </table>
             </div>
 
