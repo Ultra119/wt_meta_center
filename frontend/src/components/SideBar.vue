@@ -10,11 +10,15 @@
       <!-- Режим -->
       <div class="sidebar-section">
         <div class="sidebar-label">{{ t('sidebar.mode') }}</div>
-        <v-btn-toggle v-model="store.mode" mandatory density="compact" rounded="lg" class="w-100">
-          <v-btn value="Realistic" size="small" class="flex-grow-1">{{ t('modes.Realistic') }}</v-btn>
-          <v-btn value="Arcade"    size="small" class="flex-grow-1">{{ t('modes.Arcade')    }}</v-btn>
-          <v-btn value="Simulator" size="small" class="flex-grow-1">{{ t('modes.Simulator') }}</v-btn>
-        </v-btn-toggle>
+        <div class="seg-ctrl w-100">
+          <button
+            v-for="m in MODES"
+            :key="m.value"
+            class="seg-btn"
+            :class="{ 'seg-btn--active': store.mode === m.value }"
+            @click="store.mode = m.value"
+          >{{ t(`modes.${m.value}`) }}</button>
+        </div>
       </div>
 
       <!-- BR диапазон -->
@@ -105,6 +109,11 @@ const { t }  = useI18n()
 const store  = useDataStore()
 
 const ALL_CLASSES = ['Standard','Premium','Pack','Squadron','Marketplace','Gift','Event']
+const MODES       = [
+  { value: 'Realistic' },
+  { value: 'Arcade'    },
+  { value: 'Simulator' },
+]
 
 function snapBR(val) {
   const base = Math.floor(val)
@@ -159,5 +168,39 @@ const generatedDate = computed(() => {
   font-family: 'JetBrains Mono', monospace;
   font-size: 13px;
   color: #a7f3d0;
+}
+.seg-ctrl {
+  display: inline-flex;
+  gap: 4px;
+  background: rgba(10, 22, 40, 0.8);
+  padding: 3px;
+  border: 1px solid #1e3a5f;
+  border-radius: 8px;
+}
+.seg-btn {
+  flex: 1;
+  padding: 5px 10px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: #475569;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+  text-align: center;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.seg-btn:hover:not(.seg-btn--active) {
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.04);
+}
+.seg-btn--active {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.5);
+  color: #38bdf8;
 }
 </style>

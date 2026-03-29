@@ -16,20 +16,14 @@
         />
 
         <!-- Branch -->
-        <div class="ctrl-group">
-          <div class="ctrl-label">{{ $t('progression_tab.branch') }}</div>
-          <v-btn-toggle
-            v-model="branch"
-            mandatory
-            density="compact"
-            variant="outlined"
-            rounded="lg"
-            class="branch-toggle"
-          >
-            <v-btn value="Ground"   size="small">⚙️ {{ $t('sidebar.ground') }}</v-btn>
-            <v-btn value="Aviation" size="small">✈️ {{ $t('sidebar.aviation') }}</v-btn>
-            <v-btn value="Fleet"    size="small">⚓ {{ $t('sidebar.fleet') }}</v-btn>
-          </v-btn-toggle>
+        <div class="seg-ctrl branch-seg">
+          <button
+            v-for="opt in BRANCH_OPTIONS"
+            :key="opt.value"
+            class="seg-btn"
+            :class="{ 'seg-btn--active': branch === opt.value }"
+            @click="branch = opt.value"
+          >{{ opt.icon }} {{ $t(opt.labelKey) }}</button>
         </div>
 
         <!-- Info badges -->
@@ -200,6 +194,12 @@ import {
 const store       = useDataStore()
 const openVehicle = inject('openVehicle', null)
 const { t }       = useI18n()
+
+const BRANCH_OPTIONS = [
+  { value: 'Ground',   icon: '⚙️', labelKey: 'sidebar.ground'   },
+  { value: 'Aviation', icon: '✈️', labelKey: 'sidebar.aviation' },
+  { value: 'Fleet',    icon: '⚓', labelKey: 'sidebar.fleet'    },
+]
 
 const prefDisplay = computed(() => ({
   tank: { icon: '🛡️', label: t('vehicle_types.tank') },
@@ -779,16 +779,40 @@ lineupPrefs.value = defaultLineupPrefs(branch.value, DEFAULT_LINEUP_SLOTS, activ
   gap: 12px;
 }
 .ctrl-nation   { max-width: 200px; flex-shrink: 0; }
-.ctrl-group    { display: flex; flex-direction: column; gap: 4px; }
-.ctrl-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  color: #475569;
-  text-transform: uppercase;
+
+.seg-ctrl {
+  display: inline-flex;
+  gap: 4px;
+  background: rgba(10, 22, 40, 0.8);
+  padding: 3px;
+  border: 1px solid #1e3a5f;
+  border-radius: 8px;
+  flex-shrink: 0;
 }
-.branch-toggle { flex-shrink: 0; }
+.seg-btn {
+  padding: 5px 10px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: #475569;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.seg-btn:hover:not(.seg-btn--active) {
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.04);
+}
+.seg-btn--active {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.5);
+  color: #38bdf8;
+}
 
 .stats-badges { display: flex; gap: 4px; flex-wrap: wrap; margin-left: auto; }
 .badge {

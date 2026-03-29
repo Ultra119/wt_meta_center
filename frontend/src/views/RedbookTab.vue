@@ -105,7 +105,6 @@ const headers = computed(() => [
 </script>
 
 <style scoped>
-/* ── Shared controls-bar (mirrors ProgressionTab) ─────────────────── */
 .controls-bar {
   background: rgba(15, 23, 42, 0.6);
   border: 1px solid #1e3a5f;
