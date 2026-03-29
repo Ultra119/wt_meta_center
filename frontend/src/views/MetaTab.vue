@@ -1,21 +1,24 @@
 <template>
   <div>
-    <v-row dense class="mb-3" align="center">
-      <v-col cols="12" sm="4">
+    <div class="controls-bar mb-3">
+      <div class="controls-row">
         <v-select
           v-model="nation"
-          :items="store.nations"
+          :items="nationItems"
+          item-title="title"
+          item-value="value"
           :label="t('meta_tab.nation_label')"
           prepend-inner-icon="mdi-flag"
-          density="compact" variant="outlined" hide-details
+          density="compact"
+          variant="outlined"
+          hide-details
+          style="max-width:220px"
         />
-      </v-col>
-      <v-col cols="12" sm="8">
         <div class="tab-info">
           {{ t('meta_tab.info', { n: filtered.length, min: store.brRange[0].toFixed(1), max: store.brRange[1].toFixed(1), mode: store.mode }) }}
         </div>
-      </v-col>
-    </v-row>
+      </div>
+    </div>
 
     <v-data-table
       :headers="headers"
@@ -23,7 +26,7 @@
       :items-per-page="100"
       density="compact"
       fixed-header
-      height="calc(100vh - 220px)"
+      height="calc(100vh - 230px)"
       :sort-by="[{ key: 'META_SCORE', order: 'desc' }]"
       class="wt-table"
       @click:row="(_, { item }) => openVehicle(item)"
@@ -40,7 +43,6 @@
       <template #item.WR="{ item }">
         <span :style="{ color: wrColor(item.WR) }">{{ item.WR?.toFixed(1) }}</span>
       </template>
-      <!-- safe key: net_sl вместо "Net SL за игру" -->
       <template #item.net_sl="{ item }">
         <span style="color:#34d399;">{{ item.net_sl?.toLocaleString() }}</span>
       </template>
@@ -62,6 +64,13 @@ const store       = useDataStore()
 const openVehicle = inject('openVehicle')
 
 const nation = ref('All')
+
+const nationItems = computed(() =>
+  (store.nations ?? []).map(n => ({
+    title: n === 'All' ? t('common.all') : fmtNation(n),
+    value: n,
+  }))
+)
 
 const filtered = computed(() => {
   let rows = store.filteredVehicles
@@ -93,7 +102,26 @@ const headers = computed(() => [
 </script>
 
 <style scoped>
-.tab-info { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #94a3b8; }
+/* ── Shared controls-bar (mirrors ProgressionTab) ─────────────────── */
+.controls-bar {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid #1e3a5f;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+.controls-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.tab-info {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-left: auto;
+}
 .cell-name  { font-weight: 600; color: #e2e8f0; }
 .cell-score { font-weight: 700; font-family: 'JetBrains Mono', monospace; }
 </style>

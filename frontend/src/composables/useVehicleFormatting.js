@@ -1,8 +1,3 @@
-/**
- * Переиспользуемые форматтеры.
- * fmtType использует ключи из vehicle_types в локали — таким образом
- * все названия типов автоматически переводятся при смене языка.
- */
 import { useI18n } from 'vue-i18n'
 
 export const NATION_FLAG = {
@@ -23,19 +18,16 @@ export const CLASS_PREFIX = {
   Standard:   '',
 }
 
-/** Используй внутри <script setup> — требует активного контекста Vue */
 export function useFmtType() {
   const { t } = useI18n()
   return (type) => {
     if (!type) return '—'
     const key = `vehicle_types.${type}`
     const translated = t(key)
-    // vue-i18n возвращает ключ если перевода нет — показываем оригинал
     return translated === key ? type : translated
   }
 }
 
-/** Статичный форматтер без i18n (для мест вне компонентов) */
 export const TYPE_LABELS_EN = {
   medium_tank:         'Medium Tank',   light_tank:          'Light Tank',
   heavy_tank:          'Heavy Tank',    tank_destroyer:       'Tank Destroyer',
@@ -49,7 +41,6 @@ export const TYPE_LABELS_EN = {
   barge:               'Barge',
 }
 
-/** Оставлен для обратной совместимости — использует English fallback */
 export function fmtType(t) {
   return TYPE_LABELS_EN[t] ?? t ?? '—'
 }

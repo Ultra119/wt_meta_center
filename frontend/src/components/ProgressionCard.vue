@@ -108,7 +108,7 @@ const cardStyle = computed(() => ({
 .prog-card {
   position: relative;
   border-radius: 0 5px 5px 0;
-  padding: 5px 8px;
+  padding: 7px 10px;
   margin-bottom: 4px;
   box-sizing: border-box;
   cursor: pointer;
@@ -130,16 +130,16 @@ const cardStyle = computed(() => ({
   display: flex;
   align-items: center;
   gap: 4px;
-  margin-bottom: 3px;
+  margin-bottom: 4px;
 }
 .pc-type-icon {
-  font-size: 10px;
+  font-size: 12px;
   flex-shrink: 0;
-  opacity: 0.7;
+  opacity: 0.75;
 }
 .pc-name {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   flex: 1;
   min-width: 0;
@@ -149,12 +149,12 @@ const cardStyle = computed(() => ({
 }
 .pc-br {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   flex-shrink: 0;
 }
 .pc-verdict {
-  font-size: 9px;
+  font-size: 11px;
   flex-shrink: 0;
 }
 
@@ -165,18 +165,18 @@ const cardStyle = computed(() => ({
 }
 .pc-stat {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
+  font-size: 11px;
   color: #94a3b8;
 }
 .pc-stat-label {
-  font-size: 9px;
+  font-size: 10px;
   color: #475569;
   margin-right: 2px;
 }
 
 /* Hints */
 .pc-hint {
-  font-size: 9px;
+  font-size: 10px;
   margin-top: 5px;
   padding-top: 5px;
   line-height: 1.4;

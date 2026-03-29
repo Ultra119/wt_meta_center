@@ -4,16 +4,31 @@
       <b>{{ t('redbook_tab.title') }}</b> — {{ t('redbook_tab.description') }}
     </v-alert>
 
-    <v-row dense class="mb-3" align="center">
-      <v-col cols="12" sm="4">
-        <v-select v-model="nation" :items="store.nations" :label="t('redbook_tab.nation_label')"
-          prepend-inner-icon="mdi-flag" density="compact" variant="outlined" hide-details />
-      </v-col>
-      <v-col cols="12" sm="4">
-        <v-select v-model="limit" :items="[25,50,100,200]" :label="t('redbook_tab.show_top')"
-          density="compact" variant="outlined" hide-details />
-      </v-col>
-    </v-row>
+    <div class="controls-bar mb-3">
+      <div class="controls-row">
+        <v-select
+          v-model="nation"
+          :items="nationItems"
+          item-title="title"
+          item-value="value"
+          :label="t('redbook_tab.nation_label')"
+          prepend-inner-icon="mdi-flag"
+          density="compact"
+          variant="outlined"
+          hide-details
+          style="max-width:220px"
+        />
+        <v-select
+          v-model="limit"
+          :items="[25,50,100,200]"
+          :label="t('redbook_tab.show_top')"
+          density="compact"
+          variant="outlined"
+          hide-details
+          style="max-width:160px"
+        />
+      </div>
+    </div>
 
     <v-data-table
       :headers="headers"
@@ -21,7 +36,7 @@
       :items-per-page="100"
       density="compact"
       fixed-header
-      height="calc(100vh - 260px)"
+      height="calc(100vh - 280px)"
       :sort-by="[{ key: 'battles', order: 'asc' }]"
       class="wt-table"
       @click:row="(_, { item }) => openVehicle(item)"
@@ -54,6 +69,13 @@ const openVehicle = inject('openVehicle')
 const nation = ref('All')
 const limit  = ref(100)
 
+const nationItems = computed(() =>
+  (store.nations ?? []).map(n => ({
+    title: n === 'All' ? t('common.all') : fmtNation(n),
+    value: n,
+  }))
+)
+
 const tableRows = computed(() => {
   let rows = store.filteredVehicles
   if (nation.value !== 'All') rows = rows.filter(v => v.Nation === nation.value)
@@ -81,5 +103,19 @@ const headers = computed(() => [
 </script>
 
 <style scoped>
+/* ── Shared controls-bar (mirrors ProgressionTab) ─────────────────── */
+.controls-bar {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid #1e3a5f;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+.controls-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 .cell-name { font-weight: 600; color: #e2e8f0; }
 </style>

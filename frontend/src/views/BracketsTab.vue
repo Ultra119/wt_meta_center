@@ -1,7 +1,7 @@
 <template>
   <div>
-    <v-row dense class="mb-3" align="center">
-      <v-col cols="auto">
+    <div class="controls-bar mb-3">
+      <div class="controls-row">
         <v-select
           v-model="stepsPerBracket"
           :items="stepOptions"
@@ -13,12 +13,17 @@
           hide-details
           style="width:130px"
         />
-      </v-col>
-      <v-col cols="auto">
-        <v-select v-model="topN" :items="topNOptions" item-title="label" item-value="value"
-          :label="t('brackets_tab.top_n')" density="compact" variant="outlined" hide-details style="width:150px" />
-      </v-col>
-      <v-col cols="auto">
+        <v-select
+          v-model="topN"
+          :items="topNOptions"
+          item-title="label"
+          item-value="value"
+          :label="t('brackets_tab.top_n')"
+          density="compact"
+          variant="outlined"
+          hide-details
+          style="width:150px"
+        />
         <v-select
           v-model="excludeTypes"
           :items="availableTypeOptions"
@@ -45,18 +50,16 @@
             </div>
           </template>
         </v-select>
-      </v-col>
-      <v-col>
         <div class="tab-info">{{ t('brackets_tab.description') }}</div>
-      </v-col>
-    </v-row>
+      </div>
+    </div>
 
     <div v-if="pivot.rows.length" class="pivot-wrapper">
       <table class="pivot-table">
         <thead>
           <tr>
             <th class="br-col">{{ t('common.br') }}</th>
-            <th v-for="nat in pivot.nations" :key="nat">{{ nat }}</th>
+            <th v-for="nat in pivot.nations" :key="nat">{{ fmtNation(nat) }}</th>
           </tr>
         </thead>
         <tbody>
@@ -80,7 +83,7 @@
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useDataStore, WT_BR_STEPS } from '../stores/useDataStore.js'
-import { metaColor } from '../composables/useVehicleFormatting.js'
+import { metaColor, fmtNation } from '../composables/useVehicleFormatting.js'
 import { BRANCH_TYPES, TYPE_LABELS, TYPE_ICON, LARGE_FLEET_TYPES, SMALL_FLEET_TYPES } from '../composables/constants.js'
 
 const { t }  = useI18n()
@@ -195,6 +198,20 @@ function scoreColor(score) {
 </script>
 
 <style scoped>
+/* ── Shared controls-bar (mirrors ProgressionTab) ─────────────────── */
+.controls-bar {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid #1e3a5f;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+.controls-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 .tab-info { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #64748b; }
 
 /* Single wrapper — row of custom chips */

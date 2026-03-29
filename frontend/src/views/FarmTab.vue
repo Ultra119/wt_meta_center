@@ -1,29 +1,45 @@
 <template>
   <div>
-    <v-card color="#0f172a" class="mb-4" style="border:1px solid #1e3a5f;">
-      <v-card-text>
-        <v-row dense align="center">
-          <v-col cols="12" sm="3">
-            <v-select v-model="targetBr" :items="brOptions" item-title="label" item-value="value"
-              :label="t('farm_tab.target_br')" prepend-inner-icon="mdi-target"
-              density="compact" variant="outlined" hide-details />
-          </v-col>
-          <v-col cols="12" sm="3">
-            <v-select v-model="nation" :items="store.nations" :label="t('farm_tab.nation')"
-              prepend-inner-icon="mdi-flag" density="compact" variant="outlined" hide-details />
-          </v-col>
-          <v-col cols="12" sm="3">
-            <v-select v-model="vehicleType" :items="typeOptions" :label="t('farm_tab.veh_type')"
-              density="compact" variant="outlined" hide-details />
-          </v-col>
-          <v-col cols="auto">
-            <v-btn color="primary" prepend-icon="mdi-calculator" @click="calculate">
-              {{ t('common.calculate') }}
-            </v-btn>
-          </v-col>
-        </v-row>
-      </v-card-text>
-    </v-card>
+    <div class="controls-bar mb-4">
+      <div class="controls-row">
+        <v-select
+          v-model="targetBr"
+          :items="brOptions"
+          item-title="label"
+          item-value="value"
+          :label="t('farm_tab.target_br')"
+          prepend-inner-icon="mdi-target"
+          density="compact"
+          variant="outlined"
+          hide-details
+          style="width:130px"
+        />
+        <v-select
+          v-model="nation"
+          :items="nationItems"
+          item-title="title"
+          item-value="value"
+          :label="t('farm_tab.nation')"
+          prepend-inner-icon="mdi-flag"
+          density="compact"
+          variant="outlined"
+          hide-details
+          style="max-width:220px"
+        />
+        <v-select
+          v-model="vehicleType"
+          :items="typeOptions"
+          :label="t('farm_tab.veh_type')"
+          density="compact"
+          variant="outlined"
+          hide-details
+          style="max-width:180px"
+        />
+        <v-btn color="primary" prepend-icon="mdi-calculator" @click="calculate">
+          {{ t('common.calculate') }}
+        </v-btn>
+      </div>
+    </div>
 
     <template v-if="result">
       <v-alert color="#1e3a5f" class="mb-4" style="border:1px solid #10b981;">
@@ -83,7 +99,7 @@
 import { ref, computed, inject } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useDataStore, WT_BR_STEPS } from '../stores/useDataStore.js'
-import { vehicleDisplayName, fmtBR, farmColor, normRow } from '../composables/useVehicleFormatting.js'
+import { vehicleDisplayName, fmtBR, fmtNation, farmColor, normRow } from '../composables/useVehicleFormatting.js'
 import { TYPE_CATEGORIES } from '../composables/constants.js'
 
 const { t }       = useI18n()
@@ -96,6 +112,13 @@ const nation      = ref('All')
 const vehicleType = ref('All')
 const result      = ref(null)
 const noAnchor    = ref(false)
+
+const nationItems = computed(() =>
+  (store.nations ?? []).map(n => ({
+    title: n === 'All' ? t('common.all') : fmtNation(n),
+    value: n,
+  }))
+)
 
 const typeOptions = computed(() => {
   const cats = [t('common.all')]
@@ -110,7 +133,6 @@ function getFarmSet(vehicles, tBr, nat, vType) {
   let df = [...vehicles]
   if (nat !== 'All') df = df.filter(v => v.Nation === nat)
 
-  // vType — локализованный лейбл → маппим к ключу
   const catKeyByLabel = {
     [t('sidebar.ground')]:      'Ground',
     [t('sidebar.aviation')]:    'Aviation',
@@ -182,6 +204,20 @@ const gemHeaders = computed(() => [
 </script>
 
 <style scoped>
+/* ── Shared controls-bar (mirrors ProgressionTab) ─────────────────── */
+.controls-bar {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid #1e3a5f;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+.controls-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 .section-title { font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 700; color: #a7f3d0; letter-spacing: .08em; margin-bottom: 8px; margin-top: 4px; }
 .cell-name { font-weight: 600; color: #e2e8f0; }
 .text-muted-sm { font-size: 11px; color: #475569; font-style: italic; }

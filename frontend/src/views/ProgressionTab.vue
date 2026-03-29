@@ -118,7 +118,7 @@
         class="prog-grid"
         :style="{
           gridTemplateColumns:
-            `40px repeat(${gridData.numCols}, minmax(0, 1fr)) 160px`,
+            `40px repeat(${gridData.numCols}, minmax(120px, 1fr)) 160px`,
         }"
       >
 
@@ -951,7 +951,7 @@ lineupPrefs.value = defaultLineupPrefs(branch.value, DEFAULT_LINEUP_SLOTS, activ
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;          /* no horizontal scrollbar */
-  max-height: calc(100vh - 280px);
+  max-height: calc(100vh - 260px);
   padding-bottom: 12px;
 }
 
@@ -990,7 +990,7 @@ lineupPrefs.value = defaultLineupPrefs(branch.value, DEFAULT_LINEUP_SLOTS, activ
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  min-height: 52px;
+  min-height: 64px;
 }
 .rank-roman {
   font-family: 'Rajdhani', 'Barlow Condensed', sans-serif;
@@ -1002,7 +1002,7 @@ lineupPrefs.value = defaultLineupPrefs(branch.value, DEFAULT_LINEUP_SLOTS, activ
 
 /* Standard cell */
 .prog-cell {
-  min-height: 52px;
+  min-height: 64px;
   padding: 2px;
   min-width: 0;   /* prevents the cell from overflowing its grid column */
 }
