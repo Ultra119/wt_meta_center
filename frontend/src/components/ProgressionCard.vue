@@ -33,7 +33,7 @@
     </div>
 
     <template v-if="vehicle.Verdict === 'PREM'">
-      <div v-if="vehicle.Prem_Pain_Fix" class="pc-hint pc-hint--prem">
+      <div v-if="vehicle.Prem_Pain_Fix && (vehicle.Prem_Boost ?? 0) >= 1.05" class="pc-hint pc-hint--prem">
         👑 Helps bypass painful rank
       </div>
       <div
@@ -43,7 +43,7 @@
       >
         {{ boostLabel.text }}
       </div>
-      <div v-if="!vehicle.Prem_Pain_Fix && !boostLabel" class="pc-hint pc-hint--prem">
+      <div v-if="!(vehicle.Prem_Pain_Fix && (vehicle.Prem_Boost ?? 0) >= 1.05) && !boostLabel" class="pc-hint pc-hint--prem">
         ★ Premium
       </div>
     </template>
