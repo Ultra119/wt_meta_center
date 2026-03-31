@@ -40,17 +40,15 @@
 
       <!-- Type filter chips (dynamic per branch) -->
       <div class="type-toggles mt-2">
-        <v-chip
+        <button
           v-for="t in branchTypes"
           :key="t"
-          size="small"
-          :variant="activeTypes.has(t) ? 'elevated' : 'outlined'"
-          :color="activeTypes.has(t) ? 'primary' : 'default'"
-          class="mr-1 mb-1 type-chip"
+          class="type-btn"
+          :class="{ 'type-btn--active': activeTypes.has(t) }"
           @click="toggleType(t)"
         >
-          {{ $t(`vehicle_types.${t}`, TYPE_LABELS[t] || t) }}
-        </v-chip>
+          {{ TYPE_ICON[t] }} {{ $t(`vehicle_types.${t}`, TYPE_LABELS[t] || t) }}
+        </button>
       </div>
 
       <!-- Lineup Mix -->
@@ -108,7 +106,7 @@
         class="prog-grid"
         :style="{
           gridTemplateColumns:
-            `40px repeat(${gridData.numCols}, minmax(120px, 1fr)) 160px`,
+            `40px repeat(${gridData.numCols + 1}, minmax(120px, 1fr))`,
         }"
       >
 
@@ -831,9 +829,33 @@ lineupPrefs.value = defaultLineupPrefs(branch.value, DEFAULT_LINEUP_SLOTS, activ
 .badge-skip  { background: rgba(248,113,113,0.12); color: #f87171; }
 .badge-prem  { background: rgba(167,139,250,0.12); color: #a78bfa; }
 
-.type-toggles { display: flex; flex-wrap: wrap; }
-.type-chip    { cursor: pointer; font-size: 11px !important; transition: opacity 0.15s; }
-.type-chip:hover { opacity: 0.8; }
+.type-toggles { display: flex; flex-wrap: wrap; gap: 4px; }
+
+.type-btn {
+  padding: 4px 10px;
+  border: 1px solid #1e3a5f;
+  border-radius: 5px;
+  background: transparent;
+  color: #475569;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.type-btn:hover:not(.type-btn--active) {
+  background: rgba(255, 255, 255, 0.04);
+  color: #94a3b8;
+  border-color: #334155;
+}
+.type-btn--active {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.5);
+  color: #38bdf8;
+}
 
 .lineup-mix-row {
   display: flex;
