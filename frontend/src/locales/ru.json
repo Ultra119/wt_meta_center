@@ -19,7 +19,8 @@
     "top_n":        "Топ-N машин",
     "top_all":      "Все машины",
     "dataset":      "ДАТАСЕТ",
-    "records":      "{n} записей"
+    "records":      "{n} записей",
+    "records_short": "записей"
   },
 
   "tabs": {
@@ -31,6 +32,7 @@
   },
 
   "sidebar": {
+    "period":         "ПЕРИОД",
     "mode":           "РЕЖИМ",
     "br_range":       "БР ДИАПАЗОН",
     "min_battles":    "МИН. БОЙ",

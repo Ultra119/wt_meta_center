@@ -10,49 +10,41 @@ import pandas as pd
 
 PROJECT_DIR  = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_PUB = os.path.join(PROJECT_DIR, "frontend", "public")
-OUT_MEGA     = os.path.join(FRONTEND_PUB, "mega_db.json")
+# Per-period vehicle JSONs go into a dedicated subfolder
+DATA_DIR     = os.path.join(FRONTEND_PUB, "data")
 OUT_META     = os.path.join(FRONTEND_PUB, "meta_info.json")
 
-os.makedirs(FRONTEND_PUB, exist_ok=True)
+os.makedirs(DATA_DIR, exist_ok=True)
 
 sys.path.insert(0, os.path.join(PROJECT_DIR, "analytics"))
 sys.path.insert(0, PROJECT_DIR)
 
-from analytics.core    import AnalyticsCore
+from analytics.core      import AnalyticsCore
 from analytics.constants import WT_BR_STEPS
 
 _KEEP_COLS = [
-    # Идентификаторы
     "Name", "Nation", "BR", "Type", "Mode", "VehicleClass",
-    # Статистика игр
     "Сыграно игр", "WR", "KD",
     "SL за игру", "RP за игру", "Net SL за игру",
-    # Скоры
     "META_SCORE", "FARM_SCORE",
-    # VehicleDB — броня
     "vdb_hull_front",  "vdb_hull_side",  "vdb_hull_rear",
     "vdb_turret_front","vdb_turret_side","vdb_turret_rear",
-    # VehicleDB — двигатель / скорость
     "vdb_engine_hp_rb",     "vdb_engine_hp_ab",
     "vdb_engine_max_speed_rb","vdb_engine_max_speed_ab",
     "vdb_engine_reverse_rb",
-    # VehicleDB — вооружение
     "vdb_main_caliber_mm","vdb_main_gun_speed",
     "vdb_has_thermal","vdb_has_atgm","vdb_has_heat","vdb_has_aphe",
     "vdb_ammo_types",
-    # VehicleDB — классификация и экономика
     "vdb_is_premium","vdb_is_pack","vdb_squadron_vehicle",
     "vdb_on_marketplace","vdb_shop_is_gift","vdb_shop_is_event",
     "vdb_shop_rank","vdb_era","vdb_country","vdb_identifier",
     "vdb_arcade_br","vdb_realistic_br","vdb_simulator_br",
     "vdb_repair_cost_realistic","vdb_repair_cost_arcade","vdb_repair_cost_simulator",
     "vdb_ge_cost","vdb_exp_mul","vdb_sl_mul_realistic","vdb_sl_mul_arcade",
-    # Shop-дерево (для ProgressionTab)
     "vdb_shop_column","vdb_shop_row","vdb_shop_nation","vdb_shop_branch",
     "vdb_shop_order","vdb_req_exp","vdb_value","vdb_required_vehicle",
     "vdb_shop_group",
     "vdb_crew_total_count","vdb_visibility","vdb_mass",
-    # Матч-скор
     "vdb_match_score",
 ]
 
@@ -61,6 +53,11 @@ _ALL_VEHICLE_CLASSES = [
 ]
 
 _MODES = ["Realistic", "Arcade", "Simulator"]
+
+_WT_NATIONS = {
+    "USA","Germany","USSR","Britain","Japan","Italy",
+    "France","Sweden","Israel","China","Finland","Netherlands","Hungary",
+}
 
 
 def _safe_val(v):
@@ -84,10 +81,74 @@ def _df_to_records(df: pd.DataFrame) -> list[dict]:
     return records
 
 
+def _period_sort_key(p: str) -> tuple:
+    """
+    "MM-YYYY" → (year, month) for chronological sort.
+    "All" sorts to position 0 (before any real period).
+    """
+    if p == "All":
+        return (0, 0)
+    try:
+        month, year = p.split("-")
+        return (int(year), int(month))
+    except ValueError:
+        return (0, 0)
+
+
+def _process_period(
+    core: AnalyticsCore,
+    period_df: pd.DataFrame,
+    period_label: str,
+) -> list[dict]:
+    """
+    Temporarily replaces core.full_df with period_df so that scorer.py
+    computes z-scores and peer averages against only the current period's
+    population.  Restores the original df even if an exception occurs.
+    """
+    original_df  = core.full_df
+    core.full_df = period_df
+    all_records: list[dict] = []
+
+    try:
+        for mode in _MODES:
+            has_mode = (
+                "Mode" in core.full_df.columns
+                and mode in core.full_df["Mode"].values
+            )
+            if not has_mode:
+                print(f"   ⚠️   {mode} не найден в периоде '{period_label}' — пропуск")
+                continue
+
+            filters = {
+                "type":            "All",
+                "mode":            mode,
+                "search":          "",
+                "nation":          "All",
+                "min_br":          float(min(WT_BR_STEPS)),
+                "max_br":          float(max(WT_BR_STEPS)),
+                "min_battles":     1,
+                "vehicle_classes": _ALL_VEHICLE_CLASSES,
+            }
+
+            df_mode = core.calculate_meta(filters)
+            if df_mode.empty:
+                print(f"   ℹ️   Нет данных: {mode} / '{period_label}'")
+                continue
+
+            records = _df_to_records(df_mode)
+            all_records.extend(records)
+            print(f"   ✅  {mode}: {len(records)} записей")
+
+    finally:
+        core.full_df = original_df   # always restore
+
+    return all_records
+
+
 def main() -> None:
     t0 = time.perf_counter()
     print("=" * 60)
-    print("  WT META Center — Data Pipeline")
+    print("  WT META Center — Data Pipeline  (multi-period)")
     print(f"  {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 60)
 
@@ -99,48 +160,59 @@ def main() -> None:
 
     print(f"✅  full_df: {len(core.full_df)} строк")
 
-    all_records: list[dict] = []
+    # ── Discover period labels present in the data ────────────────────────
+    raw_periods: list[str] = []
+    if "Period" in core.full_df.columns:
+        raw_periods = [
+            p for p in core.full_df["Period"].dropna().unique().tolist()
+            if p and p != "All"
+        ]
 
-    for mode in _MODES:
-        has_mode = (
-            "Mode" in core.full_df.columns
-            and mode in core.full_df["Mode"].values
-        )
-        if not has_mode:
-            print(f"⚠️   Режим {mode} не найден — пропуск")
+    # Newest month first, "All" always at index 0
+    raw_periods.sort(key=_period_sort_key, reverse=True)
+    all_period_labels = ["All"] + raw_periods
+
+    print(f"📅  Периодов: {len(raw_periods)}  →  {raw_periods or '(нет)'}")
+
+    # ── Build the "All" aggregate ─────────────────────────────────────────
+    print("\n▶  Агрегация всех периодов → All")
+    all_df = core.aggregate_all_periods(core.full_df)
+    print(f"   ✅  {len(all_df)} уникальных записей (Name+Mode+Nation+Type+BR)")
+
+    period_dfs: dict[str, pd.DataFrame] = {"All": all_df}
+    for p in raw_periods:
+        period_dfs[p] = core.full_df[core.full_df["Period"] == p].copy()
+
+    # ── Score & write each period ─────────────────────────────────────────
+    period_record_counts: dict[str, int] = {}
+
+    for period_label in all_period_labels:
+        print(f"\n▶  Период: {period_label}")
+        period_df = period_dfs.get(period_label, pd.DataFrame())
+
+        if period_df.empty:
+            print("   ⚠️   Нет данных — пропуск")
             continue
 
-        print(f"\n▶  Обрабатываем режим: {mode}")
+        records = _process_period(core, period_df, period_label)
 
-        filters = {
-            "type":            "All",
-            "mode":            mode,
-            "search":          "",
-            "nation":          "All",
-            "min_br":          float(min(WT_BR_STEPS)),
-            "max_br":          float(max(WT_BR_STEPS)),
-            "min_battles":     1,
-            "vehicle_classes": _ALL_VEHICLE_CLASSES,
-        }
-
-        df_mode = core.calculate_meta(filters)
-        if df_mode.empty:
-            print(f"   ℹ️  Нет данных для режима {mode}")
+        if not records:
+            print("   ⚠️   Список записей пуст — файл не записан")
             continue
 
-        records = _df_to_records(df_mode)
-        all_records.extend(records)
-        print(f"   ✅  {len(records)} записей")
+        out_path = os.path.join(DATA_DIR, f"mega_db_{period_label}.json")
+        print(f"   💾  {out_path} …")
+        with open(out_path, "w", encoding="utf-8") as f:
+            json.dump(records, f, ensure_ascii=False, separators=(",", ":"))
+        size_mb = os.path.getsize(out_path) / 1_048_576
+        print(f"   ✅  {len(records)} записей · {size_mb:.2f} MB")
+        period_record_counts[period_label] = len(records)
 
-    if not all_records:
-        print("\n❌  Итоговый список пуст — JSON не записан")
+    if not period_record_counts:
+        print("\n❌  Ни один период не дал данных — meta_info.json не записан")
         sys.exit(1)
 
-    _WT_NATIONS = {
-        "USA","Germany","USSR","Britain","Japan","Italy",
-        "France","Sweden","Israel","China","Finland","Netherlands","Hungary",
-    }
-
+    # ── meta_info.json ────────────────────────────────────────────────────
     all_nations_raw = (
         core.full_df["Nation"].dropna().unique().tolist()
         if "Nation" in core.full_df.columns else []
@@ -149,32 +221,30 @@ def main() -> None:
         n for n in all_nations_raw
         if n.strip().title() in _WT_NATIONS or n in _WT_NATIONS
     )
-
     all_types = (
         sorted(core.full_df["Type"].dropna().unique().tolist())
         if "Type" in core.full_df.columns else []
     )
 
     meta_info = {
-        "generated_at":   datetime.now(timezone.utc).isoformat(),
-        "nations":        nations_list,
-        "types":          all_types,
-        "br_steps":       WT_BR_STEPS,
-        "modes":          _MODES,
+        "generated_at":    datetime.now(timezone.utc).isoformat(),
+        "periods":         all_period_labels,    # ["All", "10-2023", ...]
+        "nations":         nations_list,
+        "types":           all_types,
+        "br_steps":        WT_BR_STEPS,
+        "modes":           _MODES,
         "vehicle_classes": _ALL_VEHICLE_CLASSES,
-        "total_records":  len(all_records),
+        "total_records":   period_record_counts.get("All", 0),
+        "period_records":  period_record_counts,
     }
 
-    print(f"\n💾  Запись {OUT_MEGA} …")
-    with open(OUT_MEGA, "w", encoding="utf-8") as f:
-        json.dump(all_records, f, ensure_ascii=False, separators=(",", ":"))
-    size_mb = os.path.getsize(OUT_MEGA) / 1_048_576
-    print(f"   ✅  {len(all_records)} записей · {size_mb:.2f} MB")
-
-    print(f"💾  Запись {OUT_META} …")
+    print(f"\n💾  {OUT_META} …")
     with open(OUT_META, "w", encoding="utf-8") as f:
         json.dump(meta_info, f, ensure_ascii=False, indent=2)
-    print(f"   ✅  {len(nations_list)} наций · {len(all_types)} типов")
+    print(
+        f"   ✅  {len(nations_list)} наций · {len(all_types)} типов · "
+        f"{len(all_period_labels)} периодов"
+    )
 
     elapsed = time.perf_counter() - t0
     print(f"\n✅  Готово за {elapsed:.1f}с")

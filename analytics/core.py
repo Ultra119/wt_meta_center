@@ -31,6 +31,66 @@ class AnalyticsCore:
         self.full_df = clean_dataframe(raw_df, self.vehicle_db)
         return True
 
+    def aggregate_all_periods(self, df: pd.DataFrame) -> pd.DataFrame:
+        if df.empty:
+            return df.copy()
+
+        df = df.copy()
+
+        group_cols = [c for c in [
+            "Name", "Mode", "Nation", "Type", "BR", "VehicleClass",
+        ] if c in df.columns]
+
+        if not group_cols:
+            return df
+
+        sum_cols = [c for c in [
+            "Сыграно игр", "Победы", "Возрождения", "Смерти",
+            "Наземные убийства", "Воздушные убийства", "Морские убийства",
+        ] if c in df.columns]
+
+        wavg_cols = [c for c in ["SL за игру", "RP за игру"] if c in df.columns]
+
+        vdb_cols = [c for c in df.columns if c.startswith("vdb_")]
+
+        battles_col = "Сыграно игр"
+
+        for col in wavg_cols:
+            df[f"__w_{col}"] = df[col] * df[battles_col].clip(lower=0)
+
+        agg: dict = {}
+        for c in sum_cols:
+            agg[c] = "sum"
+        for c in wavg_cols:
+            agg[f"__w_{c}"] = "sum"
+        for c in vdb_cols:
+            agg[c] = "first"
+
+        grouped = df.groupby(group_cols, as_index=False, sort=False).agg(agg)
+
+        battles = grouped[battles_col].clip(lower=1)
+        for col in wavg_cols:
+            grouped[col] = grouped[f"__w_{col}"] / battles
+            grouped.drop(columns=[f"__w_{col}"], inplace=True)
+
+        if "Победы" in grouped.columns:
+            grouped["WR"] = (grouped["Победы"] / battles) * 100.0
+        else:
+            grouped["WR"] = 0.0
+
+        kills = pd.Series(0.0, index=grouped.index)
+        for kill_col in ("Наземные убийства", "Воздушные убийства", "Морские убийства"):
+            if kill_col in grouped.columns:
+                kills = kills + grouped[kill_col]
+        if "Смерти" in grouped.columns:
+            grouped["KD"] = kills / grouped["Смерти"].clip(lower=1)
+        else:
+            grouped["KD"] = 0.0
+
+        grouped["Period"] = "All"
+
+        return grouped.reset_index(drop=True)
+
     def calculate_meta(self, filters: dict) -> pd.DataFrame:
         """
           type        — тип техники ("All" = без фильтра)
@@ -75,4 +135,3 @@ class AnalyticsCore:
 
         self.display_df   = df_grouped.round(2)
         return self.display_df
-

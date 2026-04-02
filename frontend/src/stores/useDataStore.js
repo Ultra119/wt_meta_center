@@ -31,11 +31,30 @@ function debounce(fn, delay) {
   }
 }
 
+export function formatPeriodLabel(p) {
+  if (!p || p === 'All') return 'All Periods'
+  const parts = p.split('-')
+  if (parts.length !== 2) return p
+  try {
+    const d = new Date(parseInt(parts[1], 10), parseInt(parts[0], 10) - 1, 1)
+    return d.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
+  } catch {
+    return p
+  }
+}
+
 export const useDataStore = defineStore('data', () => {
-  const allVehicles  = ref([])
-  const metaInfo     = ref(null)
-  const loading      = ref(false)
-  const loadError    = ref(null)
+
+  const allVehicles = ref([])
+  const metaInfo    = ref(null)
+  const loading     = ref(false)
+  const loadError   = ref(null)
+
+  const _basePath = ref('')
+
+  const currentPeriod = ref('All')
+
+  const periods = computed(() => metaInfo.value?.periods ?? ['All'])
 
   const mode       = ref('Realistic')
   const minBattles = ref(50)
@@ -56,31 +75,39 @@ export const useDataStore = defineStore('data', () => {
   const _showLargeFleet = ref(false)
   const _showSmallFleet = ref(false)
 
-  watch(mode,           v => { _mode.value          = v    })
-  watch(classes,        v => { _classes.value        = [...v] }, { deep: true })
-  watch(showGround,     v => { _showGround.value     = v    })
-  watch(showAviation,   v => { _showAviation.value   = v    })
-  watch(showLargeFleet, v => { _showLargeFleet.value = v    })
-  watch(showSmallFleet, v => { _showSmallFleet.value = v    })
+  watch(mode,           v => { _mode.value          = v       })
+  watch(classes,        v => { _classes.value        = [...v]  }, { deep: true })
+  watch(showGround,     v => { _showGround.value     = v       })
+  watch(showAviation,   v => { _showAviation.value   = v       })
+  watch(showLargeFleet, v => { _showLargeFleet.value = v       })
+  watch(showSmallFleet, v => { _showSmallFleet.value = v       })
 
-  const commitRange   = debounce(v => { _brRange.value    = v    }, 220)
-  const commitBattles = debounce(v => { _minBattles.value = v    }, 220)
+  const commitRange   = debounce(v => { _brRange.value    = v }, 220)
+  const commitBattles = debounce(v => { _minBattles.value = v }, 220)
   watch(brRange,    v => commitRange([...v]))
   watch(minBattles, v => commitBattles(v))
 
+  async function _loadVehicles() {
+    const url = `${_basePath.value}/data/mega_db_${currentPeriod.value}.json`
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`mega_db_${currentPeriod.value}.json: ${res.status}`)
+    allVehicles.value = await res.json()
+  }
   async function loadData(basePath = '') {
-    loading.value  = true
-    loadError.value = null
+    _basePath.value  = basePath
+    loading.value    = true
+    loadError.value  = null
     try {
-      const [megaRes, metaRes] = await Promise.all([
-        fetch(`${basePath}/mega_db.json`),
-        fetch(`${basePath}/meta_info.json`),
-      ])
-      if (!megaRes.ok) throw new Error(`mega_db.json: ${megaRes.status}`)
+      const metaRes = await fetch(`${basePath}/meta_info.json`)
       if (!metaRes.ok) throw new Error(`meta_info.json: ${metaRes.status}`)
+      metaInfo.value = await metaRes.json()
 
-      allVehicles.value = await megaRes.json()
-      metaInfo.value    = await metaRes.json()
+      const available = metaInfo.value?.periods ?? ['All']
+      if (!available.includes(currentPeriod.value)) {
+        currentPeriod.value = available[0] ?? 'All'
+      }
+
+      await _loadVehicles()
     } catch (e) {
       loadError.value = e.message
       console.error('[DataStore]', e)
@@ -88,6 +115,20 @@ export const useDataStore = defineStore('data', () => {
       loading.value = false
     }
   }
+
+  watch(currentPeriod, async () => {
+    if (!metaInfo.value) return   // loadData() not yet called; ignore
+    loading.value   = true
+    loadError.value = null
+    try {
+      await _loadVehicles()
+    } catch (e) {
+      loadError.value = e.message
+      console.error('[DataStore] period switch error:', e)
+    } finally {
+      loading.value = false
+    }
+  })
 
   const activeTypes = computed(() => {
     const wanted = new Set()
@@ -123,6 +164,7 @@ export const useDataStore = defineStore('data', () => {
 
   return {
     allVehicles, metaInfo, loading, loadError,
+    currentPeriod, periods,
     mode, minBattles, brRange, classes,
     showGround, showAviation, showLargeFleet, showSmallFleet,
     filteredVehicles, activeTypes, nations,

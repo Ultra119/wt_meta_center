@@ -19,7 +19,8 @@
     "top_n":        "Top-N vehicles",
     "top_all":      "All vehicles",
     "dataset":      "DATASET",
-    "records":      "{n} records"
+    "records":      "{n} records",
+    "records_short": "records"
   },
 
   "tabs": {
@@ -31,6 +32,7 @@
   },
 
   "sidebar": {
+    "period":         "PERIOD",
     "mode":           "MODE",
     "br_range":       "BR RANGE",
     "min_battles":    "MIN BATTLES",

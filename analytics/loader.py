@@ -7,6 +7,8 @@ import pandas as pd
 from logger import log_debug
 from analytics.constants import VEHICLE_TYPE_CATEGORY, snap_to_wt_br
 
+_PERIOD_RE = re.compile(r'^\d{1,2}-\d{4}$')
+
 
 def load_json_files(script_dir: str) -> list:
     with open("debug_log.txt", "w", encoding="utf-8") as f:
@@ -20,11 +22,12 @@ def load_json_files(script_dir: str) -> list:
             if not filename.endswith(".json") or filename in skip_files:
                 continue
 
-            rel_path     = os.path.relpath(root, script_dir)
-            dir_category = (
-                "Uncategorized" if rel_path == "."
-                else rel_path.split(os.sep)[0]
-            )
+            rel_path  = os.path.relpath(root, script_dir)
+            first_sub = rel_path.split(os.sep)[0] if rel_path != "." else ""
+
+            dir_category = first_sub if first_sub else "Uncategorized"
+
+            period = first_sub if _PERIOD_RE.match(first_sub) else "All"
 
             name_parts = filename.replace(".json", "").split("_")
             nation = name_parts[0] if name_parts else "Unknown"
@@ -43,11 +46,13 @@ def load_json_files(script_dir: str) -> list:
                     entry["_dir_category"] = dir_category
                     entry["Nation"]        = nation
                     entry["Mode"]          = mode
+                    entry["Period"]        = period
                 all_data.extend(data)
             except Exception as e:
                 log_debug(f"Ошибка файла {filename}: {e}")
 
     return all_data
+
 
 def extract_br(raw: str) -> float:
     s = str(raw)
@@ -61,6 +66,7 @@ def extract_br(raw: str) -> float:
             pass
     match = re.search(r"\b(\d+\.\d+)\b", s)
     return float(match.group(1)) if match else 0.0
+
 
 def clean_dataframe(df: pd.DataFrame, vehicle_db) -> pd.DataFrame:
     if "vehicle_type" in df.columns:

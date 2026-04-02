@@ -8,6 +8,41 @@
     <div class="pa-3">
 
       <!-- Режим -->
+      <div v-if="store.periods.length > 1" class="sidebar-section">
+        <div class="sidebar-label">{{ t('sidebar.period') }}</div>
+        <div class="seg-ctrl w-100 period-ctrl">
+          <template v-if="store.periods.length <= 5">
+            <button
+              v-for="p in store.periods"
+              :key="p"
+              class="seg-btn period-btn"
+              :class="{ 'seg-btn--active': store.currentPeriod === p }"
+              :title="formatPeriodLabel(p)"
+              @click="store.currentPeriod = p"
+            >{{ periodShort(p) }}</button>
+          </template>
+
+          <template v-else>
+            <v-select
+              :model-value="store.currentPeriod"
+              :items="periodItems"
+              item-title="label"
+              item-value="value"
+              density="compact"
+              variant="outlined"
+              hide-details
+              class="period-select"
+              @update:model-value="v => store.currentPeriod = v"
+            />
+          </template>
+        </div>
+
+        <div v-if="activePeriodRecords !== null" class="period-info">
+          📊 {{ activePeriodRecords.toLocaleString() }} {{ t('common.records_short') }}
+        </div>
+      </div>
+
+      <!-- ── Mode ───────────────────────────────────────────────── -->
       <div class="sidebar-section">
         <div class="sidebar-label">{{ t('sidebar.mode') }}</div>
         <div class="seg-ctrl w-100">
@@ -103,7 +138,8 @@
 <script setup>
 import { computed } from 'vue'
 import { useI18n }  from 'vue-i18n'
-import { useDataStore } from '../stores/useDataStore.js'
+import { useDataStore }     from '../stores/useDataStore.js'
+import { formatPeriodLabel } from '../stores/useDataStore.js'
 
 const { t }  = useI18n()
 const store  = useDataStore()
@@ -114,6 +150,30 @@ const MODES       = [
   { value: 'Arcade'    },
   { value: 'Simulator' },
 ]
+
+function periodShort(p) {
+  if (!p || p === 'All') return 'All'
+  const parts = p.split('-')
+  if (parts.length !== 2) return p
+  try {
+    const d = new Date(parseInt(parts[1], 10), parseInt(parts[0], 10) - 1, 1)
+    const mon = d.toLocaleDateString(undefined, { month: 'short' })
+    const yr  = String(d.getFullYear()).slice(2)
+    return `${mon}'${yr}`
+  } catch {
+    return p
+  }
+}
+
+const periodItems = computed(() =>
+  store.periods.map(p => ({ value: p, label: formatPeriodLabel(p) }))
+)
+
+const activePeriodRecords = computed(() => {
+  const counts = store.metaInfo?.period_records
+  if (!counts) return null
+  return counts[store.currentPeriod] ?? null
+})
 
 function snapBR(val) {
   const base = Math.floor(val)
@@ -158,11 +218,12 @@ const generatedDate = computed(() => {
   margin-bottom: 6px;
   text-transform: uppercase;
 }
-.sidebar-value { color: #a7f3d0; font-family: 'JetBrains Mono', monospace; }
-.classes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
-.class-cb :deep(.v-label) { font-size: 11px; color: #94a3b8; }
-.type-grid { display: flex; flex-direction: column; }
-.type-cb :deep(.v-label) { font-size: 12px; color: #e2e8f0; }
+.sidebar-value  { color: #a7f3d0; font-family: 'JetBrains Mono', monospace; }
+.sidebar-info   { font-size: 11px; color: #475569; line-height: 1.6; }
+.classes-grid   { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+.class-cb  :deep(.v-label) { font-size: 11px; color: #94a3b8; }
+.type-grid  { display: flex; flex-direction: column; }
+.type-cb   :deep(.v-label) { font-size: 12px; color: #e2e8f0; }
 .battles-input { max-width: 120px; }
 .battles-input :deep(input) {
   font-family: 'JetBrains Mono', monospace;
@@ -202,5 +263,25 @@ const generatedDate = computed(() => {
   background: rgba(56, 189, 248, 0.12);
   border-color: rgba(56, 189, 248, 0.5);
   color: #38bdf8;
+}
+.period-ctrl  { flex-wrap: wrap; }
+.period-btn   { font-size: 10px; padding: 4px 6px; flex: 0 1 auto; }
+
+.period-select { font-size: 12px; }
+.period-select :deep(.v-field__input) {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: #38bdf8;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  min-height: unset;
+}
+
+.period-info {
+  margin-top: 5px;
+  font-size: 10px;
+  color: #475569;
+  font-family: 'JetBrains Mono', monospace;
 }
 </style>
