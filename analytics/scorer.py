@@ -6,8 +6,6 @@ import pandas as pd
 from analytics.constants import ROLE_WEIGHTS
 
 
-_C_CONF = 500.0
-
 _TYPE_GROUP: dict[str, str] = {
     "medium_tank":      "Ground",
     "light_tank":       "Ground",
@@ -58,9 +56,6 @@ def score(df: pd.DataFrame, settings: dict) -> pd.DataFrame:
     z_clip    = float(settings.get("z_clip",         3.0))
     wilson_z  = float(settings.get("wilson_z",      1.96))
 
-    C_battles = 200.0
-    C_spawns  = 300.0
-
     spawns = df["Возрождения"].clip(lower=1)
     df["_ks_g_raw"] = df["Наземные убийства"]  / spawns
     df["_ks_a_raw"] = df["Воздушные убийства"] / spawns
@@ -77,6 +72,33 @@ def score(df: pd.DataFrame, settings: dict) -> pd.DataFrame:
 
     for k in metric_keys:
         df[k] = 0.0
+
+    _c_battles_lookup: dict[tuple, float] = {}
+    _c_spawns_lookup:  dict[tuple, float] = {}
+
+    for br in unique_brs:
+        for tg in type_groups:
+            mask_peer = (
+                (df["BR"] >= br - mm_window) &
+                (df["BR"] <= br + mm_window) &
+                (df["_type_group"] == tg)
+            )
+            peers = df.loc[mask_peer]
+            if peers.empty:
+                _c_battles_lookup[(br, tg)] = 200.0
+                _c_spawns_lookup[(br, tg)]  = 300.0
+            else:
+                _c_battles_lookup[(br, tg)] = float(peers["Сыграно игр"].median())
+                _c_spawns_lookup[(br, tg)]  = float(peers["Возрождения"].median())
+
+    _c_conf_lookup: dict[str, float] = {}
+    for tg in type_groups:
+        mask_tg = df["_type_group"] == tg
+        group_battles = df.loc[mask_tg, "Сыграно игр"]
+        if group_battles.empty:
+            _c_conf_lookup[tg] = 500.0
+        else:
+            _c_conf_lookup[tg] = float(group_battles.quantile(0.75))
 
     for br in unique_brs:
         for tg in type_groups:
@@ -101,6 +123,9 @@ def score(df: pd.DataFrame, settings: dict) -> pd.DataFrame:
             row_slice = df.loc[mask_self]
             n_g = row_slice["Сыграно игр"]
             n_s = row_slice["Возрождения"]
+
+            C_battles = _c_battles_lookup[(br, tg)]
+            C_spawns  = _c_spawns_lookup[(br, tg)]
 
             df.loc[mask_self, "_wr"] = (
                 (row_slice["_wr_raw"] * n_g + avg_wr * C_battles)
@@ -193,7 +218,8 @@ def score(df: pd.DataFrame, settings: dict) -> pd.DataFrame:
         )
 
         battles     = float(row["Сыграно игр"])
-        confidence  = battles / (battles + _C_CONF)
+        c_conf      = _c_conf_lookup.get(row["_type_group"], 500.0)
+        confidence  = battles / (battles + c_conf)
         final_score = 50.0 + (base_score - 50.0) * confidence
 
         df.at[idx, "META_SCORE"] = final_score
