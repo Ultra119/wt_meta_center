@@ -8,6 +8,12 @@ from typing import Optional
 
 _SUFFIX_RE = re.compile(r"(_shop|_\d+)$")
 
+_BADGE_PREFIX_RE = re.compile(r"^[^\w(\[{\"']+", re.UNICODE)
+
+def _strip_badge_prefix(name: str) -> str:
+    return _BADGE_PREFIX_RE.sub("", name).strip()
+
+
 UNITS_CSV_URL: str = (
     "https://github.com/gszabi99/War-Thunder-Datamine"
     "/raw/master/lang.vromfs.bin_u/lang/units.csv"
@@ -101,6 +107,8 @@ class UnitsCsvTranslator:
 
                     if len(english) >= 2 and english[0] == '"' and english[-1] == '"':
                         english = english[1:-1].replace('""', '"')
+
+                    english = _strip_badge_prefix(english)
 
                     if not raw_id or not english:
                         count_skipped += 1
