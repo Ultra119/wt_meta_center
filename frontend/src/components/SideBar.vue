@@ -36,10 +36,6 @@
             />
           </template>
         </div>
-
-        <div v-if="activePeriodRecords !== null" class="period-info">
-          📊 {{ activePeriodRecords.toLocaleString() }} {{ t('common.records_short') }}
-        </div>
       </div>
 
       <!-- ── Mode ───────────────────────────────────────────────── -->
@@ -277,12 +273,5 @@ const generatedDate = computed(() => {
   padding-top: 4px;
   padding-bottom: 4px;
   min-height: unset;
-}
-
-.period-info {
-  margin-top: 5px;
-  font-size: 10px;
-  color: #475569;
-  font-family: 'JetBrains Mono', monospace;
 }
 </style>
