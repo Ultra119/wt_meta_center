@@ -28,7 +28,8 @@
     "redbook":     "Red Book",
     "brackets":    "BR Grid",
     "farm":        "Lineup",
-    "progression": "Tech Tree"
+    "progression": "Tech Tree",
+    "cost": "Tree Cost"
   },
 
   "sidebar": {
@@ -97,7 +98,7 @@
     "gems_empty":     "No gems in -2.0 BR range with Farm Score above anchor.",
     "no_anchor":      "❌ No anchor vehicle found at this BR with the current filters.",
     "role":           "Role",
-    "role_anchor":    "⚓ Anchor",
+    "role_anchor":    "Anchor",
     "role_top":       "💰 Top farmer",
     "role_reserve":   "🔄 Reserve",
     "col_vehicle":    "Vehicle",
@@ -130,6 +131,27 @@
     "tip_skip":       "Better option exists at this tier",
     "tip_prem":       "Premium vehicle — check boost label",
     "tip_lineup":     "Lineup Mix controls how many slots per type are expected when assigning verdicts."
+  },
+
+  "cost_tab": {
+    "metric_rp":       "Research Points",
+    "metric_sl":       "Purchase SL",
+    "metric_train":    "Crew Training SL",
+    "up_to_era":       "Up to era",
+    "include":         "Include",
+    "era":             "Era",
+    "vehicles":        "vehicles",
+    "n_vehicles":      "{n} vehicles",
+    "branch_ground":   "Ground",
+    "branch_aviation": "Aviation",
+    "branch_helicopters": "Helicopters",
+    "branch_fleet":    "Fleet",
+    "cheapest":        "Cheapest",
+    "priciest":        "Most expensive",
+    "tip_title":       "Tree Cost Comparison",
+    "tip_desc":        "Total cost to research the full tech tree per nation and branch. Only Standard vehicles unless otherwise selected.",
+    "tip_bars":        "Each bar = total RP or SL. Segments = individual eras.",
+    "tip_eras":        "Darker color = higher era. Hover a segment for breakdown."
   },
 
   "vehicle_card": {
