@@ -101,8 +101,9 @@ export const LINEUP_PRIORITY = {
   Ground:      ['tank', 'spaa', 'tank_destroyer'],
   Aviation:    ['fighter', 'assault', 'bomber'],
   Helicopters: ['attack_helicopter', 'utility_helicopter'],
-  Fleet:       ['destroyer', 'light_cruiser', 'boat', 'heavy_cruiser',
-                'battleship', 'battlecruiser', 'heavy_boat', 'frigate', 'barge'],
+  LargeFleet:  ['destroyer', 'light_cruiser', 'heavy_cruiser',
+                'battleship', 'battlecruiser'],
+  SmallFleet:  ['boat', 'heavy_boat', 'frigate', 'barge'],
 }
 
 export const BR_ERA_THRESHOLDS = [2.3, 3.7, 5.3, 6.7, 8.3, 9.7, 11.3]

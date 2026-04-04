@@ -204,10 +204,11 @@ const openVehicle = inject('openVehicle', null)
 const { t }       = useI18n()
 
 const BRANCH_OPTIONS = [
-  { value: 'Ground',   icon: '⚙️', labelKey: 'sidebar.ground'   },
-  { value: 'Aviation', icon: '✈️', labelKey: 'sidebar.aviation' },
+  { value: 'Ground',      icon: '⚙️', labelKey: 'sidebar.ground'      },
+  { value: 'Aviation',    icon: '✈️', labelKey: 'sidebar.aviation'    },
   { value: 'Helicopters', icon: '🚁', labelKey: 'sidebar.helicopters' },
-  { value: 'Fleet',    icon: '⚓', labelKey: 'sidebar.fleet'    },
+  { value: 'LargeFleet',  icon: '🛳️', labelKey: 'sidebar.large_fleet' },
+  { value: 'SmallFleet',  icon: '⛵', labelKey: 'sidebar.small_fleet' },
 ]
 
 const prefDisplay = computed(() => ({
@@ -385,10 +386,12 @@ function bestAnchorForEra(eraVehicles, junkThresh, yellowThresh, minLineup) {
 }
 
 function superCat(branchName) {
-  if (branchName === 'spaa')                         return 'AntiAir'
-  if (BRANCH_TYPES.Ground.includes(branchName))     return 'Ground'
-  if (BRANCH_TYPES.Aviation.includes(branchName))   return 'Aviation'
-  if (BRANCH_TYPES.Helicopters.includes(branchName)) return 'Aviation'
+  if (branchName === 'spaa')                              return 'AntiAir'
+  if (BRANCH_TYPES.Ground.includes(branchName))          return 'Ground'
+  if (BRANCH_TYPES.Aviation.includes(branchName))        return 'Aviation'
+  if (BRANCH_TYPES.Helicopters.includes(branchName))     return 'Aviation'
+  if (BRANCH_TYPES.LargeFleet?.includes(branchName))     return 'LargeFleet'
+  if (BRANCH_TYPES.SmallFleet?.includes(branchName))     return 'SmallFleet'
   return 'Fleet'
 }
 
