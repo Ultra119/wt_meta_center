@@ -16,8 +16,8 @@ export const BRANCH_TYPES = {
   Ground:      ['medium_tank', 'light_tank', 'heavy_tank', 'tank_destroyer', 'spaa'],
   Aviation:    ['fighter', 'bomber', 'assault'],
   Helicopters: ['attack_helicopter', 'utility_helicopter'],
-  Fleet:       ['destroyer', 'heavy_cruiser', 'light_cruiser', 'battleship', 'battlecruiser',
-                'boat', 'heavy_boat', 'frigate', 'barge'],
+  LargeFleet:  ['destroyer', 'heavy_cruiser', 'light_cruiser', 'battleship', 'battlecruiser'],
+  SmallFleet:  ['boat', 'heavy_boat', 'frigate', 'barge'],
 }
 
 export const TYPE_LABELS = {
