@@ -83,10 +83,6 @@ def _df_to_records(df: pd.DataFrame) -> list[dict]:
 
 
 def _period_sort_key(p: str) -> tuple:
-    """
-    "MM-YYYY" → (year, month) for chronological sort.
-    "All" sorts to position 0 (before any real period).
-    """
     if p == "All":
         return (0, 0)
     try:
@@ -101,11 +97,6 @@ def _process_period(
     period_df: pd.DataFrame,
     period_label: str,
 ) -> list[dict]:
-    """
-    Temporarily replaces core.full_df with period_df so that scorer.py
-    computes z-scores and peer averages against only the current period's
-    population.  Restores the original df even if an exception occurs.
-    """
     original_df  = core.full_df
     core.full_df = period_df
     all_records: list[dict] = []
@@ -141,7 +132,7 @@ def _process_period(
             print(f"   ✅  {mode}: {len(records)} записей")
 
     finally:
-        core.full_df = original_df   # always restore
+        core.full_df = original_df
 
     return all_records
 
@@ -161,7 +152,6 @@ def main() -> None:
 
     print(f"✅  full_df: {len(core.full_df)} строк")
 
-    # ── Discover period labels present in the data ────────────────────────
     raw_periods: list[str] = []
     if "Period" in core.full_df.columns:
         raw_periods = [
@@ -169,13 +159,11 @@ def main() -> None:
             if p and p != "All"
         ]
 
-    # Newest month first, "All" always at index 0
     raw_periods.sort(key=_period_sort_key, reverse=True)
     all_period_labels = ["All"] + raw_periods
 
     print(f"📅  Периодов: {len(raw_periods)}  →  {raw_periods or '(нет)'}")
 
-    # ── Build the "All" aggregate ─────────────────────────────────────────
     print("\n▶  Агрегация всех периодов → All")
     all_df = core.aggregate_all_periods(core.full_df)
     print(f"   ✅  {len(all_df)} уникальных записей (Name+Mode+Nation+Type+BR)")
@@ -184,7 +172,6 @@ def main() -> None:
     for p in raw_periods:
         period_dfs[p] = core.full_df[core.full_df["Period"] == p].copy()
 
-    # ── Score & write each period ─────────────────────────────────────────
     period_record_counts: dict[str, int] = {}
 
     for period_label in all_period_labels:
@@ -213,7 +200,6 @@ def main() -> None:
         print("\n❌  Ни один период не дал данных — meta_info.json не записан")
         sys.exit(1)
 
-    # ── meta_info.json ────────────────────────────────────────────────────
     all_nations_raw = (
         core.full_df["Nation"].dropna().unique().tolist()
         if "Nation" in core.full_df.columns else []
