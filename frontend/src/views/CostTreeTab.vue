@@ -132,13 +132,15 @@
 
         <div v-else class="branch-summary">
           <span class="summary-item cheap">
-            ✅ {{ t('cost_tab.cheapest') }}:
-            <b>{{ chartRows(branch.key).at(-1)?.nation }}</b>
+            <span class="summary-dot cheap-dot" />
+            {{ t('cost_tab.cheapest') }}:
+            <b>{{ fmtNationName(chartRows(branch.key).at(-1)?.nation) }}</b>
             · {{ fmtM(chartRows(branch.key).at(-1)?.total) }}
           </span>
           <span class="summary-item expensive">
-            🔴 {{ t('cost_tab.priciest') }}:
-            <b>{{ chartRows(branch.key)[0]?.nation }}</b>
+            <span class="summary-dot expensive-dot" />
+            {{ t('cost_tab.priciest') }}:
+            <b>{{ fmtNationName(chartRows(branch.key)[0]?.nation) }}</b>
             · {{ fmtM(chartRows(branch.key)[0]?.total) }}
           </span>
         </div>
@@ -169,19 +171,28 @@ const ERA_COLORS = {
 }
 
 const NATION_FLAG = {
-  USA:         '🇺🇸',
-  Germany:     '🇩🇪',
-  USSR:        '🇷🇺',
-  Britain:     '🇬🇧',
-  Japan:       '🇯🇵',
-  Italy:       '🇮🇹',
-  France:      '🇫🇷',
-  Sweden:      '🇸🇪',
-  Israel:      '🇮🇱',
-  China:       '🇨🇳',
-  Finland:     '🇫🇮',
-  Netherlands: '🇳🇱',
-  Hungary:     '🇭🇺',
+  usa:         '🇺🇸', germany:     '🇩🇪', ussr:        '🇷🇺',
+  britain:     '🇬🇧', japan:       '🇯🇵', italy:       '🇮🇹',
+  france:      '🇫🇷', sweden:      '🇸🇪', israel:      '🇮🇱',
+  china:       '🇨🇳',
+}
+
+const NATION_DISPLAY = {
+  usa:         'USA',        germany:     'Germany',
+  ussr:        'USSR',       britain:     'Britain',
+  japan:       'Japan',      italy:       'Italy',
+  france:      'France',     sweden:      'Sweden',
+  israel:      'Israel',     china:       'China',
+}
+
+function fmtNationName(n) {
+  if (!n) return '—'
+  const key = n.toLowerCase()
+  return NATION_DISPLAY[key] ?? (n.charAt(0).toUpperCase() + n.slice(1))
+}
+
+function nationFlag(n) {
+  return NATION_FLAG[n?.toLowerCase()] ?? '🏳️'
 }
 
 const BRANCHES = [
@@ -371,6 +382,7 @@ function totalColor(total) {
 }
 .metric-icon { font-size: 14px; }
 
+.class-chips {}
 .chips-row { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px; }
 .cls-chip {
   padding: 3px 8px;
@@ -432,7 +444,6 @@ function totalColor(total) {
   overflow: hidden;
 }
 
-.scale-row,
 .bar-row {
   display: flex;
   align-items: center;
@@ -480,10 +491,19 @@ function totalColor(total) {
   font-weight: 700;
 }
 
+.scale-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: -12px -16px 0;
+  padding: 8px 16px 6px;
+  background: rgba(10, 18, 35, 0.45);
+  border-bottom: 1px solid #1e3a5f;
+  border-radius: 10px 10px 0 0;
+}
 .ticks {
   position: relative;
   height: 16px;
-  margin-bottom: 4px;
 }
 .tick-label {
   position: absolute;
@@ -536,16 +556,33 @@ function totalColor(total) {
 
 .branch-summary {
   display: flex;
+  align-items: center;
   gap: 24px;
-  padding-top: 10px;
-  margin-top: 4px;
+  padding: 9px 16px 4px;
+  margin: 0 -16px -8px;
   border-top: 1px solid #1e3a5f;
+  background: rgba(10, 18, 35, 0.45);
   flex-wrap: wrap;
+  border-radius: 0 0 10px 10px;
 }
-.summary-item { font-size: 11px; color: #64748b; }
+.summary-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #64748b;
+}
 .summary-item b { color: #94a3b8; }
 .summary-item.cheap b     { color: #4ade80; }
 .summary-item.expensive b { color: #f87171; }
+.summary-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.cheap-dot     { background: #4ade80; }
+.expensive-dot { background: #f87171; }
 
 .no-data {
   font-size: 12px;
