@@ -889,6 +889,8 @@ lineupPrefs.value = defaultLineupPrefs(branch.value, DEFAULT_LINEUP_SLOTS, activ
 .lineup-mix-label {
   flex-shrink: 0;
   margin-right: 4px;
+  font-size: 12px;
+  color: #94a3b8;
 }
 
 .lineup-mix-types {
