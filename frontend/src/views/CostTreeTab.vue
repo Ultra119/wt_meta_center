@@ -487,14 +487,14 @@ function totalColor(total) {
   color: #475569;
   white-space: nowrap;
 }
-
-.bar-col {
-  background-image: repeating-linear-gradient(
-    to right,
-    rgba(30, 58, 95, 0.55) 0px, rgba(30, 58, 95, 0.55) 1px,
-    transparent 1px, transparent 25%
-  );
-  background-size: 100% 100%;
+.tick-gridline {
+  position: absolute;
+  top: 100%;
+  width: 1px;
+  height: 9999px;
+  background: rgba(30, 58, 95, 0.6);
+  pointer-events: none;
+  z-index: 0;
 }
 
 /* Bars */
@@ -505,6 +505,8 @@ function totalColor(total) {
   overflow: hidden;
   background: rgba(30, 58, 95, 0.3);
   width: 100%;
+  position: relative;
+  z-index: 1;
 }
 .bar-seg {
   height: 100%;
