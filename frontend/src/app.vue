@@ -55,11 +55,12 @@ const store  = useDataStore()
 const activeTab = ref('/meta')
 
 const tabs = [
-  { to: '/meta',        icon: 'mdi-trophy',                  labelKey: 'tabs.meta'        },
+  { to: '/meta',        icon: 'mdi-trophy',                   labelKey: 'tabs.meta'        },
   { to: '/redbook',     icon: 'mdi-book-open',                labelKey: 'tabs.redbook'     },
   { to: '/brackets',    icon: 'mdi-view-grid',                labelKey: 'tabs.brackets'    },
   { to: '/farm',        icon: 'mdi-wrench',                   labelKey: 'tabs.farm'        },
   { to: '/progression', icon: 'mdi-chart-timeline-variant',   labelKey: 'tabs.progression' },
+  { to: '/cost',        icon: 'mdi-chart-bar',                labelKey: 'tabs.cost' },
 ]
 
 const modalOpen       = ref(false)
