@@ -4,8 +4,7 @@ export const NATION_FLAG = {
   usa:         '🇺🇸', germany:    '🇩🇪', ussr:        '🇷🇺',
   britain:     '🇬🇧', japan:      '🇯🇵', italy:       '🇮🇹',
   france:      '🇫🇷', sweden:     '🇸🇪', israel:      '🇮🇱',
-  china:       '🇨🇳', finland:    '🇫🇮', netherlands: '🇳🇱',
-  hungary:     '🇭🇺',
+  china:       '🇨🇳',
 }
 
 export const CLASS_PREFIX = {
@@ -55,10 +54,7 @@ const NATION_DISPLAY = {
   france:      'France',
   sweden:      'Sweden',
   israel:      'Israel',
-  china:       'China',
-  finland:     'Finland',
-  netherlands: 'Netherlands',
-  hungary:     'Hungary',
+  china:       'China'
 }
 
 export function fmtNation(n) {
