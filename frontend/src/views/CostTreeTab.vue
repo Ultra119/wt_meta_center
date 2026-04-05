@@ -89,8 +89,8 @@
           class="bar-row"
         >
           <div class="nation-col">
-            <span class="nation-flag">{{ NATION_FLAG[row.nation] ?? '🏳️' }}</span>
-            <span class="nation-name">{{ row.nation }}</span>
+            <span class="nation-flag">{{ nationFlag(row.nation) }}</span>
+            <span class="nation-name">{{ fmtNationName(row.nation) }}</span>
           </div>
 
           <div class="bar-col">
