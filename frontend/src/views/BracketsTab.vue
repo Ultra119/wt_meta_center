@@ -90,13 +90,15 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useTabFilters } from '../composables/useTabFilters.js'
 import { useDataStore, WT_BR_STEPS } from '../stores/useDataStore.js'
 import { metaColor, fmtNation } from '../composables/useVehicleFormatting.js'
 import { BRANCH_TYPES, TYPE_LABELS, TYPE_ICON, LARGE_FLEET_TYPES, SMALL_FLEET_TYPES } from '../composables/constants.js'
 import InfoTip from '../components/InfoTip.vue'
 
 const { t }  = useI18n()
-const store  = useDataStore()
+const store = useDataStore()
+useTabFilters()
 
 const stepsPerBracket = ref(3)
 const topN            = ref(5)

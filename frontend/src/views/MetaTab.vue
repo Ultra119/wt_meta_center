@@ -62,6 +62,7 @@
 <script setup>
 import { ref, computed, inject } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useTabFilters } from '../composables/useTabFilters.js'
 import { useDataStore } from '../stores/useDataStore.js'
 import {
   vehicleDisplayName, fmtType, fmtNation,
@@ -70,7 +71,8 @@ import {
 import InfoTip from '../components/InfoTip.vue'
 
 const { t }       = useI18n()
-const store       = useDataStore()
+const store = useDataStore()
+useTabFilters()
 const openVehicle = inject('openVehicle')
 
 const nation = ref('All')

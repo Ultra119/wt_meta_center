@@ -170,13 +170,15 @@
 <script setup>
 import { ref, computed, inject } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useTabFilters } from '../composables/useTabFilters.js'
 import { useDataStore, WT_BR_STEPS } from '../stores/useDataStore.js'
 import { vehicleDisplayName, farmColor, normRow } from '../composables/useVehicleFormatting.js'
 import { TYPE_CATEGORIES } from '../composables/constants.js'
 import InfoTip from '../components/InfoTip.vue'
 
 const { t }       = useI18n()
-const store       = useDataStore()
+const store = useDataStore()
+useTabFilters()
 const openVehicle = inject('openVehicle')
 
 const DEFAULT_BR  = 7.0

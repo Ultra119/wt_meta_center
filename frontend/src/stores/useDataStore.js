@@ -53,6 +53,11 @@ export const useDataStore = defineStore('data', () => {
 
   const _basePath = ref('')
 
+  const tabFilterConfig = ref(null)
+
+  function setTabFilters(cfg) { tabFilterConfig.value = cfg  }
+  function clearTabFilters()  { tabFilterConfig.value = null }
+
   const currentPeriod = ref('All')
 
   const periods = computed(() => metaInfo.value?.periods ?? ['All'])
@@ -174,6 +179,7 @@ export const useDataStore = defineStore('data', () => {
     showGround, showAviation, showHelicopters, showLargeFleet, showSmallFleet,
     filteredVehicles, activeTypes, nations,
     loadData,
+    tabFilterConfig, setTabFilters, clearTabFilters,
     BR_MIN, BR_MAX, WT_BR_STEPS,
   }
 })

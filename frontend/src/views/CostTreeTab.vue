@@ -153,11 +153,13 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useTabFilters } from '../composables/useTabFilters.js'
 import { useDataStore } from '../stores/useDataStore.js'
 import InfoTip from '../components/InfoTip.vue'
 
 const { t }   = useI18n()
-const store   = useDataStore()
+const store = useDataStore()
+useTabFilters({ mode: false, brRange: false, minBattles: false, classes: false, types: false })
 
 const ERA_COLORS = {
   1: '#6ee7b7',

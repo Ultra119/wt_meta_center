@@ -185,6 +185,7 @@
 <script setup>
 import { ref, computed, inject, watch, shallowRef } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useTabFilters } from '../composables/useTabFilters.js'
 import { useDataStore } from '../stores/useDataStore.js'
 import { fmtNation } from '../composables/useVehicleFormatting.js'
 import ProgressionCard from '../components/ProgressionCard.vue'
@@ -202,7 +203,8 @@ import {
 
 // Store & Inject
 
-const store       = useDataStore()
+const store = useDataStore()
+useTabFilters({ brRange: false, minBattles: false, classes: false, types: false })
 const openVehicle = inject('openVehicle', null)
 const { t }       = useI18n()
 

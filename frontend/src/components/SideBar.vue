@@ -6,6 +6,11 @@
     style="border-right: 1px solid #1e3a5f; top: 48px; height: calc(100% - 48px);"
   >
     <div class="pa-3">
+        <div v-if="hiddenCount > 0" class="filters-hint">
+          <span class="mdi mdi-filter-off-outline hint-icon" />
+          {{ t('sidebar.filters_hidden', { n: hiddenCount }) }}
+        </div>
+      </Transition>
 
       <!-- Режим -->
       <div v-if="store.periods.length > 1" class="sidebar-section">
@@ -39,7 +44,8 @@
       </div>
 
       <!-- ── Mode ───────────────────────────────────────────────── -->
-      <div class="sidebar-section">
+      <Transition name="section-fade">
+        <div v-if="cfg.mode" class="sidebar-section">
         <div class="sidebar-label">{{ t('sidebar.mode') }}</div>
         <div class="seg-ctrl w-100">
           <button
@@ -50,10 +56,12 @@
             @click="store.mode = m.value"
           >{{ t(`modes.${m.value}`) }}</button>
         </div>
-      </div>
+        </div>
+      </Transition>
 
       <!-- BR диапазон -->
-      <div class="sidebar-section">
+      <Transition name="section-fade">
+        <div v-if="cfg.brRange" class="sidebar-section">
         <div class="sidebar-label">
           {{ t('sidebar.br_range') }}
           <span class="sidebar-value">{{ store.brRange[0].toFixed(1) }} – {{ store.brRange[1].toFixed(1) }}</span>
@@ -69,10 +77,12 @@
           class="mt-1"
           @update:model-value="v => store.brRange = v.map(snapBR)"
         />
-      </div>
+        </div>
+      </Transition>
 
       <!-- Минимум боёв -->
-      <div class="sidebar-section">
+      <Transition name="section-fade">
+        <div v-if="cfg.minBattles" class="sidebar-section">
         <div class="sidebar-label">{{ t('sidebar.min_battles') }}</div>
         <v-text-field
           v-model.number="store.minBattles"
@@ -84,10 +94,12 @@
           hide-details
           class="mt-1 battles-input"
         />
-      </div>
+        </div>
+      </Transition>
 
       <!-- Классы техники -->
-      <div class="sidebar-section">
+      <Transition name="section-fade">
+        <div v-if="cfg.classes" class="sidebar-section">
         <div class="sidebar-label">{{ t('sidebar.vehicle_class') }}</div>
         <div class="classes-grid">
           <v-checkbox
@@ -102,10 +114,12 @@
             class="class-cb"
           />
         </div>
-      </div>
+        </div>
+      </Transition>
 
       <!-- Тип техники -->
-      <div class="sidebar-section">
+      <Transition name="section-fade">
+        <div v-if="cfg.types" class="sidebar-section">
         <div class="sidebar-label">{{ t('sidebar.vehicle_type') }}</div>
         <div class="type-grid">
           <v-checkbox v-model="store.showGround"     :label="t('sidebar.ground')"       density="compact" hide-details color="accent" class="type-cb" />
@@ -117,7 +131,8 @@
         <v-alert v-if="mixWarning" type="warning" density="compact" variant="tonal" class="mt-2 text-caption">
           {{ mixWarning }}
         </v-alert>
-      </div>
+        </div>
+      </Transition>
 
       <!-- Датасет -->
       <div v-if="store.metaInfo" class="sidebar-section">
@@ -140,6 +155,17 @@ import { formatPeriodLabel } from '../stores/useDataStore.js'
 
 const { t }  = useI18n()
 const store  = useDataStore()
+
+const ALL_FILTER_KEYS = ['mode', 'brRange', 'minBattles', 'classes', 'types']
+
+const cfg = computed(() => {
+  const base = Object.fromEntries(ALL_FILTER_KEYS.map(k => [k, true]))
+  return store.tabFilterConfig ? { ...base, ...store.tabFilterConfig } : base
+})
+
+const hiddenCount = computed(() =>
+  ALL_FILTER_KEYS.filter(k => !cfg.value[k]).length
+)
 
 const ALL_CLASSES = ['Standard','Premium','Pack','Squadron','Marketplace','Gift','Event']
 const MODES       = [
@@ -265,6 +291,31 @@ const generatedDate = computed(() => {
 .period-btn   { font-size: 10px; padding: 4px 6px; flex: 0 1 auto; }
 
 .period-select { font-size: 12px; }
+.filters-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding: 6px 10px;
+  background: rgba(167, 139, 250, 0.07);
+  border: 1px solid rgba(167, 139, 250, 0.2);
+  border-radius: 6px;
+  font-size: 10px;
+  color: #7c6fad;
+  letter-spacing: 0.04em;
+}
+.hint-icon { font-size: 13px; flex-shrink: 0; }
+
+.section-fade-enter-active,
+.section-fade-leave-active { transition: opacity 0.2s ease, transform 0.2s ease, max-height 0.25s ease; max-height: 300px; overflow: hidden; }
+.section-fade-enter-from,
+.section-fade-leave-to     { opacity: 0; transform: translateY(-4px); max-height: 0; }
+
+.hint-fade-enter-active,
+.hint-fade-leave-active { transition: opacity 0.2s ease; }
+.hint-fade-enter-from,
+.hint-fade-leave-to     { opacity: 0; }
+
 .period-select :deep(.v-field__input) {
   font-family: 'Rajdhani', sans-serif;
   font-size: 12px;
