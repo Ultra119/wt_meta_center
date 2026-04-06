@@ -6,6 +6,7 @@ export function useTabFilters(config = {}) {
   const store = useDataStore()
 
   const resolved = {
+    period:     config.period     ?? true,
     mode:       config.mode       ?? true,
     brRange:    config.brRange    ?? true,
     minBattles: config.minBattles ?? true,

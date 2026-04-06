@@ -13,7 +13,7 @@
         </div>
       </Transition>
 
-      <div v-if="store.periods.length > 1" class="sidebar-section">
+      <div v-if="cfg.period && store.periods.length > 1" class="sidebar-section">
         <div class="sidebar-label">{{ t('sidebar.period') }}</div>
         <div class="seg-ctrl w-100 period-ctrl">
           <template v-if="store.periods.length <= 5">
@@ -150,7 +150,7 @@ import { formatPeriodLabel } from '../stores/useDataStore.js'
 const { t }  = useI18n()
 const store  = useDataStore()
 
-const ALL_FILTER_KEYS = ['mode', 'brRange', 'minBattles', 'classes', 'types']
+const ALL_FILTER_KEYS = ['period', 'mode', 'brRange', 'minBattles', 'classes', 'types']
 
 const cfg = computed(() => {
   const base = Object.fromEntries(ALL_FILTER_KEYS.map(k => [k, true]))

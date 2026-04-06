@@ -159,7 +159,7 @@ import InfoTip from '../components/InfoTip.vue'
 
 const { t }   = useI18n()
 const store = useDataStore()
-useTabFilters({ mode: false, brRange: false, minBattles: false, classes: false, types: false })
+useTabFilters({ period: false, mode: false, brRange: false, minBattles: false, classes: false, types: false })
 
 const ERA_COLORS = {
   1: '#6ee7b7',
