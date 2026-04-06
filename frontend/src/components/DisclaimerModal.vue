@@ -8,7 +8,6 @@
   >
     <v-card color="#0f172a" style="border: 1px solid #1e3a5f;">
 
-      <!-- Header -->
       <v-card-title class="d-flex align-center gap-2 px-5 pt-5 pb-0">
         <span class="disclaimer-icon">⚠️</span>
         <span class="disclaimer-title">{{ t('disclaimer.title') }}</span>
@@ -16,7 +15,6 @@
 
       <v-divider color="#1e3a5f" class="mt-3" />
 
-      <!-- Body -->
       <v-card-text class="px-5 py-4">
         <p class="disclaimer-body">{{ t('disclaimer.body_1') }}</p>
         <p class="disclaimer-body mt-3">{{ t('disclaimer.body_2') }}</p>
@@ -36,7 +34,6 @@
 
       <v-divider color="#1e3a5f" />
 
-      <!-- Actions -->
       <v-card-actions class="px-5 py-4 justify-end">
         <v-btn
           color="primary"

@@ -245,7 +245,6 @@ const uniqueVehicles = computed(() => {
   return out
 })
 
-// Pick value for current metric
 function metricValue(v) {
   if (metric.value === 'rp') return Number(v.vdb_req_exp ?? 0)
   if (metric.value === 'sl') return Number(v.vdb_value   ?? 0)
@@ -254,24 +253,19 @@ function metricValue(v) {
 
 const metricUnit = computed(() => metric.value === 'rp' ? 'RP' : 'SL')
 
-// Build aggregated data: { [branchKey]: { [nation]: { total, byEra, countByEra } } }
 const aggregated = computed(() => {
   const result = {}
   for (const b of BRANCHES) result[b.key] = {}
 
   for (const v of uniqueVehicles.value) {
-    // Class filter
     if (!selectedClasses.value.includes(v.VehicleClass)) continue
 
-    // Era filter: keep era 1–8 always (no slider)
     const era = Number(v.vdb_era ?? 0)
     if (era < 1 || era > 8) continue
 
-    // Skip vehicles with no value for chosen metric
     const val = metricValue(v)
     if (!val) continue
 
-    // Find branch
     const vType = v.Type
     let bKey = null
     for (const b of BRANCHES) {
@@ -537,7 +531,6 @@ function totalColor(total) {
   pointer-events: none;
 }
 
-/* Bars */
 .bar-track {
   display: flex;
   height: 20px;

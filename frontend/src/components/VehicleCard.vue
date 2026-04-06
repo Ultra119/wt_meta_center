@@ -17,7 +17,6 @@
       <v-card-text class="pa-0">
         <div class="card-grid">
 
-          <!-- Статистика -->
           <div class="card-section">
             <div class="section-title"><v-icon size="12" style="margin-right:4px;opacity:.7">mdi-chart-bar</v-icon>{{ t('vehicle_card.stats') }}</div>
             <div class="stat-row"><span class="stat-label">{{ t('vehicle_card.nation')  }}</span><span class="stat-value">{{ fmtNation(vehicle.Nation) }}</span></div>
@@ -27,7 +26,6 @@
             <div class="stat-row"><span class="stat-label">{{ t('vehicle_card.kd')      }}</span><span class="stat-value">{{ vehicle.KD?.toFixed(2) }}</span></div>
           </div>
 
-          <!-- Скоры -->
           <div class="card-section">
             <div class="section-title"><v-icon size="12" style="margin-right:4px;opacity:.7">mdi-trophy</v-icon>{{ t('vehicle_card.scores') }}</div>
             <div class="score-row">
@@ -50,7 +48,6 @@
             </div>
           </div>
 
-          <!-- Броня -->
           <template v-if="hasVdb">
             <div class="card-section">
               <div class="section-title"><v-icon size="12" style="margin-right:4px;opacity:.7">mdi-shield</v-icon>{{ t('vehicle_card.armor') }}</div>
@@ -76,7 +73,6 @@
               </table>
             </div>
 
-            <!-- Подвижность -->
             <div class="card-section">
               <div class="section-title"><v-icon size="12" style="margin-right:4px;opacity:.7">mdi-cog</v-icon>{{ t('vehicle_card.mobility') }}</div>
               <div class="stat-row">
@@ -93,7 +89,6 @@
               </div>
             </div>
 
-            <!-- Вооружение -->
             <div class="card-section">
               <div class="section-title"><v-icon size="12" style="margin-right:4px;opacity:.7">mdi-bullet</v-icon>{{ t('vehicle_card.weapons') }}</div>
               <div class="stat-row">
@@ -112,7 +107,6 @@
               </div>
             </div>
 
-            <!-- Экономика -->
             <div class="card-section">
               <div class="section-title"><v-icon size="12" style="margin-right:4px;opacity:.7">mdi-cash</v-icon>{{ t('vehicle_card.economy') }}</div>
               <div class="stat-row">

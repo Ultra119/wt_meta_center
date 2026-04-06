@@ -5,7 +5,6 @@
     :style="cardStyle"
     @click="$emit('click')"
   >
-    <!-- Header: icon · name · BR · verdict icon -->
     <div class="pc-header">
       <v-icon class="pc-type-icon" size="13" :title="vehicle._branch">{{ typeIcon }}</v-icon>
       <v-icon v-if="classIcon" class="pc-class-icon" size="11" :style="{ color: brColor }">{{ classIcon }}</v-icon>
@@ -14,14 +13,12 @@
       <v-icon class="pc-verdict" size="12" :style="{ color: vc.border }">{{ vc.icon }}</v-icon>
     </div>
 
-    <!-- Stats row: WR · K/D · META -->
     <div class="pc-stats">
       <span class="pc-stat"><span class="pc-stat-label">WR</span>{{ wrStr }}%</span>
       <span class="pc-stat"><span class="pc-stat-label">K/D</span>{{ kdStr }}</span>
       <span class="pc-stat"><span class="pc-stat-label">META</span>{{ metaStr }}</span>
     </div>
 
-    <!-- Hints (conditional, at most one per card) -->
     <div v-if="vehicle.Cross_Hint" class="pc-hint pc-hint--cross">
       {{ vehicle.Cross_Hint }}
     </div>
@@ -60,17 +57,14 @@ import {
   CLASS_BR_COLOR,
 } from '../composables/constants.js'
 
-// Props / Emits
 const props = defineProps({
   vehicle: { type: Object,  required: true },
   grouped: { type: Boolean, default: false },
 })
 defineEmits(['click'])
 
-// Verdict visual
 const vc = computed(() => VERDICT_COLORS[props.vehicle.Verdict] ?? VERDICT_COLORS.PASS)
 
-// Display strings
 const vehicleName = computed(() => props.vehicle.Name ?? '')
 const classIcon   = computed(() => CLASS_PREFIX[props.vehicle.VehicleClass] || null)
 const brStr   = computed(() => parseFloat(props.vehicle.BR           || 0).toFixed(1))
@@ -78,12 +72,10 @@ const wrStr   = computed(() => parseFloat(props.vehicle.WR           || 0).toFix
 const kdStr   = computed(() => parseFloat(props.vehicle.KD           || 0).toFixed(1))
 const metaStr = computed(() => parseFloat(props.vehicle._localScore  || 0).toFixed(0))
 
-// Colors
 const typeIcon  = computed(() => TYPE_ICON[props.vehicle._branch] || '🔧')
 const brColor   = computed(() => CLASS_BR_COLOR[props.vehicle.VehicleClass] || '#64748b')
 const nameColor = computed(() => brColor.value === '#64748b' ? '#e2e8f0' : brColor.value)
 
-// Premium boost label
 const boostLabel = computed(() => {
   const b = props.vehicle.Prem_Boost
   if (!b || b < 0.01) return null
@@ -92,7 +84,6 @@ const boostLabel = computed(() => {
   return               { text: `↓ Weaker ×${b.toFixed(1)}`,            color: '#f87171' }
 })
 
-// Card border / background driven by verdict
 const cardStyle = computed(() => ({
   borderLeft:      `4px solid ${vc.value.border}`,
   borderTop:       `1px solid ${vc.value.border}22`,
@@ -104,7 +95,6 @@ const cardStyle = computed(() => ({
 </script>
 
 <style scoped>
-/* Card shell */
 .prog-card {
   position: relative;
   border-radius: 0 5px 5px 0;
@@ -120,12 +110,10 @@ const cardStyle = computed(() => ({
   box-shadow: 3px 4px 16px var(--glow, #1e3a5f66);
   filter: brightness(1.08);
 }
-/* When inside a .group-bracket: collapse bottom margin so cards touch */
 .prog-card--grouped {
   margin-bottom: 0;
 }
 
-/* Header row */
 .pc-header {
   display: flex;
   align-items: center;

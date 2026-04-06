@@ -13,7 +13,6 @@
         </div>
       </Transition>
 
-      <!-- Режим -->
       <div v-if="store.periods.length > 1" class="sidebar-section">
         <div class="sidebar-label">{{ t('sidebar.period') }}</div>
         <div class="seg-ctrl w-100 period-ctrl">
@@ -44,7 +43,6 @@
         </div>
       </div>
 
-      <!-- ── Mode ───────────────────────────────────────────────── -->
       <Transition name="section-fade">
         <div v-if="cfg.mode" class="sidebar-section">
         <div class="sidebar-label">{{ t('sidebar.mode') }}</div>
@@ -60,7 +58,6 @@
         </div>
       </Transition>
 
-      <!-- BR диапазон -->
       <Transition name="section-fade">
         <div v-if="cfg.brRange" class="sidebar-section">
         <div class="sidebar-label">
@@ -81,7 +78,6 @@
         </div>
       </Transition>
 
-      <!-- Минимум боёв -->
       <Transition name="section-fade">
         <div v-if="cfg.minBattles" class="sidebar-section">
         <div class="sidebar-label">{{ t('sidebar.min_battles') }}</div>
@@ -98,7 +94,6 @@
         </div>
       </Transition>
 
-      <!-- Классы техники -->
       <Transition name="section-fade">
         <div v-if="cfg.classes" class="sidebar-section">
         <div class="sidebar-label">{{ t('sidebar.vehicle_class') }}</div>
@@ -118,7 +113,6 @@
         </div>
       </Transition>
 
-      <!-- Тип техники -->
       <Transition name="section-fade">
         <div v-if="cfg.types" class="sidebar-section">
         <div class="sidebar-label">{{ t('sidebar.vehicle_type') }}</div>
@@ -135,7 +129,6 @@
         </div>
       </Transition>
 
-      <!-- Датасет -->
       <div v-if="store.metaInfo" class="sidebar-section">
         <div class="sidebar-label">{{ t('common.dataset') }}</div>
         <div class="sidebar-info">

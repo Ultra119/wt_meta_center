@@ -22,7 +22,6 @@
 
     <v-spacer />
 
-    <!-- Global search -->
     <div class="search-wrapper" ref="wrapperRef">
 
       <div class="search-field" :class="{ 'search-field--active': isOpen }">
@@ -46,7 +45,6 @@
         </button>
       </div>
 
-      <!-- Teleport to body to escape v-app-bar overflow:hidden -->
       <Teleport to="body">
         <Transition name="dropdown">
           <div
@@ -88,7 +86,6 @@
       </Teleport>
     </div>
 
-    <!-- Language switcher -->
     <div class="lang-switcher ml-3">
       <v-btn
         v-for="loc in SUPPORTED_LOCALES"
@@ -124,7 +121,6 @@ const activeIdx  = ref(-1)
 const inputRef   = ref(null)
 const wrapperRef = ref(null)
 
-// Position dropdown relative to wrapper via getBoundingClientRect
 const dropdownStyle = ref({})
 
 function updateDropdownPos() {
@@ -139,7 +135,6 @@ function updateDropdownPos() {
   }
 }
 
-// Close on outside click
 function onDocClick(e) {
   if (!wrapperRef.value?.contains(e.target)) closeSearch()
 }
@@ -305,7 +300,6 @@ function selectActive() {
 .dropdown-leave-to     { opacity: 0; }
 </style>
 
-<!-- Dropdown styles are global because it's teleported to <body> -->
 <style>
 .search-dropdown {
   background: #0d1b2e;

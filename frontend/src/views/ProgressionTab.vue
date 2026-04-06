@@ -3,7 +3,6 @@
     <div class="controls-bar mb-3">
       <div class="controls-row">
 
-        <!-- Nation -->
         <v-select
           v-model="nation"
           :items="nationOptions"
@@ -17,7 +16,6 @@
           class="ctrl-nation"
         />
 
-        <!-- Branch -->
         <div class="seg-ctrl branch-seg">
           <button
             v-for="opt in BRANCH_OPTIONS"
@@ -28,7 +26,6 @@
           ><v-icon size="14" class="seg-btn-icon">{{ opt.icon }}</v-icon> {{ $t(opt.labelKey) }}</button>
         </div>
 
-        <!-- Info badges -->
         <div class="stats-badges">
           <span v-if="progressionData.length" class="badge badge-total">
             <v-icon size="11">mdi-format-list-bulleted</v-icon> {{ progressionData.length }}
@@ -40,7 +37,6 @@
         </div>
       </div>
 
-      <!-- Type filter chips (dynamic per branch) -->
       <div class="type-toggles mt-2">
         <button
           v-for="t in branchTypes"
@@ -54,7 +50,6 @@
         </button>
       </div>
 
-      <!-- Lineup Mix -->
       <div class="lineup-mix-row mt-2">
         <span class="ctrl-label lineup-mix-label">{{ $t('progression_tab.lineup_mix') }}</span>
         <div class="lineup-mix-types">
@@ -115,7 +110,6 @@
       {{ $t('progression_tab.no_data') }}
     </v-alert>
 
-    <!-- Main Grid -->
     <div v-else class="prog-grid-wrap">
       <div
         class="prog-grid"
@@ -125,7 +119,6 @@
         }"
       >
 
-        <!-- Header row  -->
         <div class="grid-hdr grid-hdr--rank">RANK</div>
 
         <div :style="{ gridColumn: `2 / span ${gridData.numCols}` }" />
@@ -134,12 +127,10 @@
 
         <template v-for="era in gridData.eras" :key="`era-${era}`">
 
-          <!-- Rank label -->
           <div class="rank-cell">
             <span class="rank-roman">{{ ROMAN[era] }}</span>
           </div>
 
-          <!-- Standard branch columns -->
           <div
             v-for="col in gridData.numCols"
             :key="`cell-${era}-${col}`"
@@ -160,7 +151,6 @@
                 />
               </div>
 
-              <!-- Single standalone card -->
               <ProgressionCard
                 v-else
                 :vehicle="item.vehicle"
@@ -169,7 +159,6 @@
             </template>
           </div>
 
-          <!-- Premium column — transparent cell, no dashed border -->
           <div class="prog-cell">
             <ProgressionCard
               v-for="v in gridData.getPremVehicles(era)"
@@ -205,7 +194,6 @@ import {
   NO_CROSS_TYPES, FILL_MIN_SCORE,
 } from '../composables/constants.js'
 
-// Store & Inject
 
 const store = useDataStore()
 useTabFilters({ brRange: false, minBattles: false, classes: false, types: false })
@@ -230,7 +218,6 @@ const prefDisplay = computed(() => ({
   ),
 }))
 
-// Controls
 
 const nation      = ref('')
 const branch      = ref('Ground')
@@ -244,7 +231,6 @@ const nationOptions = computed(() =>
     .map(n => ({ title: fmtNation(n), value: n }))
 )
 
-// Initialise nation once the store has loaded
 watch(nationOptions, (opts) => {
   if (!nation.value && opts.length) nation.value = opts[0].value
 }, { immediate: true })
@@ -324,7 +310,6 @@ function toggleType(t) {
   activeTypes.value = next
 }
 
-// Algorithm Helpers
 
 function brToEra(br) {
   for (let i = 0; i < BR_ERA_THRESHOLDS.length; i++) {
@@ -406,7 +391,6 @@ function superCat(branchName) {
   return 'Fleet'
 }
 
-// Main Computation
 
 const progressionData = computed(() => {
   const allVehicles = store.allVehicles ?? []
@@ -415,10 +399,9 @@ const progressionData = computed(() => {
   const selectedNation = nation.value
   const selectedMode   = store.mode
   const brTypes        = BRANCH_TYPES[branch.value] ?? []
-  const active         = activeTypes.value          // shallowRef — dep registered
-  const prefs          = lineupPrefs.value          // reactive dep — triggers on pref change
+  const active         = activeTypes.value
+  const prefs          = lineupPrefs.value
 
-  // 1. Filter & deduplicate
   const raw = allVehicles.filter(v =>
     v.Nation === selectedNation &&
     v.Mode   === selectedMode  &&
@@ -436,7 +419,6 @@ const progressionData = computed(() => {
 
   if (!seen.size) return []
 
-  // 2. Enrich
   const enriched = [...seen.values()].map((v, i) => {
     const br     = parseFloat(v.BR) || 0
     const rawEra = v.vdb_era ? (parseInt(v.vdb_era) || 0) : 0
@@ -464,12 +446,10 @@ const progressionData = computed(() => {
   stdVehicles.sort( (a, b) => shopSort(a) - shopSort(b))
   premVehicles.sort((a, b) => shopSort(a) - shopSort(b))
 
-  // 3. Dynamic thresholds
   const [junkThresh, yellowThresh] = computeDynamicThresholds(
     enriched.map(v => v._localScore)
   )
 
-  // Per-era junk threshold
   const eraJunk = {}
   {
     const byEra = {}
@@ -484,7 +464,6 @@ const progressionData = computed(() => {
   const mustMinMeta = yellowThresh
   const skipMaxMeta = junkThresh
 
-  // Pass 1: MUST / PASS / SKIP per branch
   const byBranch = {}
   for (const v of stdVehicles) {
     ;(byBranch[v._branch] ??= []).push(v)
@@ -533,7 +512,6 @@ const progressionData = computed(() => {
     }
   }
 
-  // Pass 2: Cross-branch hints
   for (const v of stdVehicles) {
     if (v.Verdict !== VERDICT_MUST && v.Verdict !== VERDICT_PASS) continue
     if (v._localScore < 1e-3 || NO_CROSS_TYPES.has(v._branch))   continue
@@ -567,7 +545,6 @@ const progressionData = computed(() => {
     }
   }
 
-  // Pain eras (no MUST vehicle)
   const eraHasMust = {}
   for (const v of stdVehicles) {
     eraHasMust[v._era_int] ??= false
@@ -579,7 +556,6 @@ const progressionData = computed(() => {
       .map(([e]) => +e)
   )
 
-  // Pass 3: FILL
   for (const [prefKey, want] of Object.entries(prefs)) {
     if (!want || want <= 0) continue
 
@@ -655,7 +631,6 @@ const progressionData = computed(() => {
     }
   }
 
-  //Premium: PREM verdict + boost
   for (const v of premVehicles) {
     v.Verdict       = VERDICT_PREM
     v.Prem_Pain_Fix = painEras.has(v._era_int)
@@ -674,7 +649,6 @@ const progressionData = computed(() => {
       : Math.round((premGrind / bestFree) * 100) / 100
   }
 
-  // Clean dangling SKIP references
   const skipNames = new Set(
     stdVehicles.filter(v => v.Verdict === VERDICT_SKIP).map(v => v.Name)
   )
@@ -688,7 +662,6 @@ const progressionData = computed(() => {
   return [...stdVehicles, ...premVehicles]
 })
 
-// Grid Data
 
 const gridData = computed(() => {
   const vehicles = progressionData.value
@@ -748,7 +721,6 @@ const gridData = computed(() => {
   return { eras, numCols, typesInDf, getCellVehicles, getPremVehicles }
 })
 
-// Group bracketing
 
 function groupedCells(cellVehicles) {
   const result  = []
@@ -775,7 +747,6 @@ function groupedCells(cellVehicles) {
   return result
 }
 
-// Stats
 
 function countByVerdict(verdict) {
   return progressionData.value.filter(v => v.Verdict === verdict).length
