@@ -47,7 +47,8 @@
     "small_fleet":    "Small Fleet",
     "warn_none":      "No vehicle class selected",
     "warn_mix":       "Mixed: fleet + ground/aviation",
-    "dataset_date":   "{date}"
+    "dataset_date":   "{date}",
+    "filters_hidden": "{n} filter(s) hidden on this tab"
   },
 
   "topbar": {
