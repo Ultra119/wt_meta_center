@@ -204,7 +204,7 @@ function snapBR(val) {
 const mixWarning = computed(() => {
   const fleet  = store.showLargeFleet || store.showSmallFleet
   const ground = store.showGround || store.showAviation || store.showHelicopters
-  const none   = !store.showGround && !store.showAviation && !store.showLargeFleet && !store.showSmallFleet
+  const none   = !store.showGround && !store.showAviation && !store.showHelicopters && !store.showLargeFleet && !store.showSmallFleet
   if (none)            return t('sidebar.warn_none')
   if (fleet && ground) return t('sidebar.warn_mix')
   return null
