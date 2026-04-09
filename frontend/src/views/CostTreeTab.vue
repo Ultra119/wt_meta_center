@@ -15,20 +15,6 @@
           </button>
         </div>
 
-        <div class="ctrl-divider" />
-
-        <div class="class-chips">
-          <span class="ctrl-label">{{ t('cost_tab.include') }}</span>
-          <div class="chips-row">
-            <button
-              v-for="cls in CLASS_OPTIONS"
-              :key="cls"
-              :class="['cls-chip', selectedClasses.includes(cls) && 'active']"
-              @click="toggleClass(cls)"
-            >{{ t(`vehicle_classes.${cls}`) }}</button>
-          </div>
-        </div>
-
         <InfoTip align="right" class="ml-auto">
           <p><b>{{ t('cost_tab.tip_title') }}</b></p>
           <p>{{ t('cost_tab.tip_desc') }}</p>
@@ -159,7 +145,7 @@ import InfoTip from '../components/InfoTip.vue'
 
 const { t }   = useI18n()
 const store = useDataStore()
-useTabFilters({ period: false, mode: false, brRange: false, minBattles: false, classes: false, types: false })
+useTabFilters({ period: false, mode: false, brRange: false, minBattles: false, classes: true, types: false })
 
 const ERA_COLORS = {
   1: '#6ee7b7',
@@ -212,22 +198,13 @@ const METRICS = [
   { key: 'sl', icon: 'mdi-cash' },
 ]
 
-const CLASS_OPTIONS = ['Standard', 'Squadron', 'Premium', 'Pack', 'Event']
-
-const metric          = ref('rp')
-const selectedClasses = ref(['Standard'])
+const metric = ref('rp')
 
 const MAX_SCALE = computed(() => metric.value === 'sl' ? 40_000_000 : 20_000_000)
 const SCALE_TICKS = computed(() => {
   const m = MAX_SCALE.value
   return [0, m * 0.25, m * 0.5, m * 0.75, m]
 })
-
-function toggleClass(cls) {
-  const i = selectedClasses.value.indexOf(cls)
-  if (i === -1) selectedClasses.value.push(cls)
-  else if (selectedClasses.value.length > 1) selectedClasses.value.splice(i, 1)
-}
 
 const sourceVehicles = computed(() =>
   store.allVehicles ?? store.filteredVehicles ?? []
@@ -258,7 +235,7 @@ const aggregated = computed(() => {
   for (const b of BRANCHES) result[b.key] = {}
 
   for (const v of uniqueVehicles.value) {
-    if (!selectedClasses.value.includes(v.VehicleClass)) continue
+    if (!store.classes.includes(v.VehicleClass)) continue
 
     const era = Number(v.vdb_era ?? 0)
     if (era < 1 || era > 8) continue
@@ -295,7 +272,7 @@ function chartRows(branchKey) {
 
 function branchVehicleCount(branchKey) {
   return uniqueVehicles.value.filter(v =>
-    selectedClasses.value.includes(v.VehicleClass) &&
+    store.classes.includes(v.VehicleClass) &&
     Number(v.vdb_era ?? 0) >= 1 &&
     BRANCH_TYPE_SET[branchKey]?.has(v.Type)
   ).length
@@ -379,24 +356,6 @@ function totalColor(total) {
 .tip-icon  { font-size: 14px; color: #475569; flex-shrink: 0; }
 .metric-icon { font-size: 15px; }
 .branch-icon { font-size: 20px; color: #a7f3d0; }
-
-.class-chips {}
-.chips-row { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px; }
-.cls-chip {
-  padding: 3px 8px;
-  border-radius: 4px;
-  border: 1px solid #1e3a5f;
-  background: transparent;
-  color: #475569;
-  font-size: 11px;
-  cursor: pointer;
-  transition: all .12s;
-}
-.cls-chip.active {
-  border-color: #10b981;
-  background: rgba(16,185,129,.1);
-  color: #10b981;
-}
 
 .era-legend {
   display: flex;
