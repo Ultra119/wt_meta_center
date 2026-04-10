@@ -128,6 +128,11 @@ def _process_period(
                 continue
 
             records = _df_to_records(df_mode)
+            unmatched = [r for r in records if not r.get("vdb_match_score")]
+            if unmatched:
+                names = list({r.get("vdb_identifier") or r.get("Name", "?") for r in unmatched})
+                print(f"   ⚠️   {len(unmatched)} записей без VDB-матча (только статистика): {names[:5]}")
+
             all_records.extend(records)
             print(f"   ✅  {mode}: {len(records)} записей")
 

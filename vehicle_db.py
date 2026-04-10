@@ -201,9 +201,18 @@ def _build_vdb_row(v: dict) -> dict:
     return row
 
 
+_BRANCH_TO_TYPE: dict[str, str] = {
+    "helicopters": "attack_helicopter",
+    "aviation":    "fighter",
+    "army":        "medium_tank",
+    "fleet":       "destroyer",
+}
+
+
 class VehicleDB:
     def __init__(self, vehicles_json_path: str) -> None:
         self._index: dict[str, dict] = {}
+        self._shop_index: dict[str, dict] = {}
 
         dataset_dir = (
             os.path.dirname(os.path.abspath(vehicles_json_path))
@@ -249,6 +258,8 @@ class VehicleDB:
         shop = parse_shop_file(path)
         if not shop:
             return
+
+        self._shop_index = shop
 
         updated = 0
         for vid, sdata in shop.items():
@@ -360,6 +371,44 @@ class VehicleDB:
             if missing_ids:
                 sample_missing = missing_ids[:10]
                 print(f"[VehicleDB] ⚠️  Не найдено {total - matched} записей, первые 10: {sample_missing}")
+
+            if self._units.loaded:
+                enriched_names = 0
+                for idx, row in df[df["vdb_match_score"] == 0].iterrows():
+                    uid = str(row.get("id", "") or "")
+                    if not uid:
+                        continue
+                    name = self._units.find_name(uid)
+                    if name and "Name" in df.columns:
+                        df.at[idx, "Name"] = name
+                        enriched_names += 1
+                if enriched_names:
+                    print(f"[VehicleDB] 📛 Имена из units.csv для {enriched_names} незаматченных записей")
+
+            if self._shop_index:
+                enriched_shop = 0
+                for idx, row in df[df["vdb_match_score"] == 0].iterrows():
+                    uid = str(row.get("id", "") or "")
+                    sdata = self._shop_index.get(uid)
+                    if not sdata:
+                        continue
+                    df.at[idx, "vdb_shop_column"]   = sdata["shop_column"]
+                    df.at[idx, "vdb_shop_row"]       = sdata["shop_row"]
+                    df.at[idx, "vdb_shop_rank"]      = sdata["shop_rank"]
+                    df.at[idx, "vdb_shop_group"]     = sdata["shop_group"]
+                    df.at[idx, "vdb_shop_nation"]    = sdata["shop_nation"]
+                    df.at[idx, "vdb_shop_branch"]    = sdata["shop_branch"]
+                    df.at[idx, "vdb_shop_order"]     = sdata["shop_order"]
+                    df.at[idx, "vdb_shop_is_gift"]   = sdata.get("shop_is_gift",  False)
+                    df.at[idx, "vdb_shop_is_event"]  = sdata.get("shop_is_event", False)
+                    df.at[idx, "vdb_identifier"]     = uid
+                    branch   = sdata.get("shop_branch", "")
+                    fallback = _BRANCH_TO_TYPE.get(branch)
+                    if fallback and "Type" in df.columns:
+                        df.at[idx, "Type"] = fallback
+                    enriched_shop += 1
+                if enriched_shop:
+                    print(f"[VehicleDB] 🗺️  Shop-данные применены для {enriched_shop} незаматченных записей")
 
         return df
 
