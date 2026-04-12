@@ -11,8 +11,7 @@ _PERIOD_RE = re.compile(r'^\d{1,2}-\d{4}$')
 
 
 def load_json_files(script_dir: str) -> list:
-    with open("debug_log.txt", "w", encoding="utf-8") as f:
-        f.write("=== ЗАПУСК WT META CENTER v5.0 ===\n")
+    log_debug("=== STARTING WT META CENTER ===")
 
     all_data: list = []
     skip_files = {"settings.json", "vehicles.json"}
@@ -49,7 +48,7 @@ def load_json_files(script_dir: str) -> list:
                     entry["Period"]        = period
                 all_data.extend(data)
             except Exception as e:
-                log_debug(f"Ошибка файла {filename}: {e}")
+                log_debug(f"File error {filename}: {e}")
 
     return all_data
 
@@ -65,7 +64,7 @@ def extract_br(raw: str) -> float:
         except Exception:
             pass
     match = re.search(r"\b(\d+\.\d+)\b", s)
-    return float(match.group(1)) if match else 0.0
+    return float(match.group(1)) if match else float("nan")
 
 
 def clean_dataframe(df: pd.DataFrame, vehicle_db) -> pd.DataFrame:
@@ -172,9 +171,18 @@ def clean_dataframe(df: pd.DataFrame, vehicle_db) -> pd.DataFrame:
     raw_br = (
         df["Rank_Info"].apply(extract_br)
         if "Rank_Info" in df.columns
-        else pd.Series(0.0, index=df.index)
+        else pd.Series(float("nan"), index=df.index)
     )
-    df["BR"] = raw_br.apply(snap_to_wt_br)
+
+    df["BR"] = raw_br.apply(lambda x: snap_to_wt_br(x) if pd.notna(x) else float("nan"))
+
+    invalid_br = df["BR"].isna()
+    if invalid_br.any():
+        log_debug(
+            f"Skipped {int(invalid_br.sum())} records without valid br"
+            f"(examples Name: {df.loc[invalid_br, 'Name'].head(5).tolist()})"
+        )
+        df = df[~invalid_br].reset_index(drop=True)
 
     df.drop(columns=["_dir_category"], errors="ignore", inplace=True)
 
@@ -184,8 +192,8 @@ def clean_dataframe(df: pd.DataFrame, vehicle_db) -> pd.DataFrame:
 
         matched = int((df.get("vdb_match_score", 0) > 0).sum())
         log_debug(
-            f"[VehicleDB] vdb_ матч завершён. "
-            f"Сопоставлено: {matched}/{len(df)}"
+            f"[VehicleDB] vdb_ match completed. "
+            f"Compared: {matched}/{len(df)}"
         )
 
         if "vdb_vehicle_type" in df.columns:
@@ -194,8 +202,8 @@ def clean_dataframe(df: pd.DataFrame, vehicle_db) -> pd.DataFrame:
             valid  = good_match & vdb_vt.isin(["", "nan"]).eq(False)
             df.loc[valid, "Type"] = df.loc[valid, "vdb_vehicle_type"]
             log_debug(
-                f"[VehicleDB] Type уточнён для {int(valid.sum())} строк "
-                f"из {len(df)} (через vdb_vehicle_type)"
+                f"[VehicleDB] Type updated by {int(valid.sum())} strings "
+                f"from {len(df)} (через vdb_vehicle_type)"
             )
 
     def _derive_class(row) -> str:
