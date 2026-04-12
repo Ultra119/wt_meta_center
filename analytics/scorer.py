@@ -199,11 +199,8 @@ def score(df: pd.DataFrame, settings: dict) -> pd.DataFrame:
         weights = ROLE_WEIGHTS.get(vtype, ROLE_WEIGHTS["_default"]).copy()
 
         if vtype == "spaa":
-            ks_g  = float(row["_ks_g"])
-            ks_a  = float(row["_ks_a"])
-            total = ks_g + ks_a
-            t      = (ks_g / total) if total > 1e-6 else 0.0
-            t      = max(0.0, min(1.0, t))
+            z_g    = float(row.get("z_ks_g", 0.0))
+            t      = max(0.0, min(1.0, z_g / z_clip)) if z_clip > 1e-9 else 0.0
             w_spaa = ROLE_WEIGHTS["spaa"]
             w_td   = ROLE_WEIGHTS["tank_destroyer"]
             weights = {k: w_spaa[k] * (1.0 - t) + w_td[k] * t for k in w_spaa}
