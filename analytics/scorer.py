@@ -93,7 +93,7 @@ def score(df: pd.DataFrame, settings: dict) -> pd.DataFrame:
                 df.loc[mask_self, "_wr"] = (
                     (row_slice["_wr_raw"] * n_g + avg_wr * C_battles)
                     / (n_g + C_battles)
-                ) * 100.0
+                )
 
                 df.loc[mask_self, "_kd"] = (
                     (row_slice["_total_kills"] + avg_kd * C_deaths)
@@ -117,6 +117,30 @@ def score(df: pd.DataFrame, settings: dict) -> pd.DataFrame:
                     / (n_s + C_spawns)
                 )
 
+    _RAW_COL: dict[str, str] = {
+        "_wr":   "_wr_raw",
+        "_kd":   "_kd_raw",
+        "_ks_g": "_ks_g_raw",
+        "_ks_a": "_ks_a_raw",
+        "_ks_n": "_ks_n_raw",
+        "_surv": "_surv_raw",
+    }
+
+    _global_sigma: dict[tuple, dict[str, float]] = {}
+    for mode in unique_modes:
+        mask_mode = (df["Mode"] == mode) if mode is not None else pd.Series(True, index=df.index)
+        for tg in type_groups:
+            mask_tg = (df["_type_group"] == tg) & mask_mode
+            g = df.loc[mask_tg]
+            sigs: dict[str, float] = {}
+            for m_col, raw_col in _RAW_COL.items():
+                vals  = g[raw_col]
+                g_mu  = vals.median()
+                g_mad = (vals - g_mu).abs().median()
+                g_sig = g_mad * 1.4826
+                sigs[m_col] = float(g_sig) if (not pd.isna(g_sig) and g_sig > 1e-9) else 0.0
+            _global_sigma[(tg, mode)] = sigs
+
     for k in metric_keys:
         df[f"z{k}"] = 0.0
 
@@ -131,15 +155,23 @@ def score(df: pd.DataFrame, settings: dict) -> pd.DataFrame:
                     mask_mode
                 )
                 mask_self = (df["BR"] == br) & (df["_type_group"] == tg) & mask_mode
-                peers = df.loc[mask_peer]
+                peers     = df.loc[mask_peer]
+                g_sigs    = _global_sigma.get((tg, mode), {})
 
                 for m_col in metric_keys:
-                    p_vals = peers[m_col]
-                    mu     = p_vals.median()
-                    mad    = (p_vals - mu).abs().median()
-                    sigma  = mad * 1.4826
+                    raw_col  = _RAW_COL[m_col]
+                    p_raw    = peers[raw_col]
+
+                    mu    = p_raw.median()
+                    mad   = (p_raw - mu).abs().median()
+                    sigma = mad * 1.4826
+
                     if pd.isna(sigma) or sigma < 1e-9:
-                        sigma = 1.0
+                        sigma = g_sigs.get(m_col, 0.0)
+
+                    if sigma < 1e-9:
+                        continue
+
                     df.loc[mask_self, f"z{m_col}"] = (
                         (df.loc[mask_self, m_col] - mu) / sigma
                     ).clip(-z_clip, z_clip)
@@ -199,6 +231,19 @@ def score(df: pd.DataFrame, settings: dict) -> pd.DataFrame:
     df["Net SL за игру"] = net_sl.round(0).astype(int)
     df["_z_sl"]          = 0.0
 
+    _global_sigma_sl: dict[tuple, float] = {}
+    for mode in unique_modes:
+        mask_mode = (df["Mode"] == mode) if mode is not None else pd.Series(True, index=df.index)
+        for tg in type_groups:
+            mask_tg  = (df["_type_group"] == tg) & mask_mode
+            g_sl     = df.loc[mask_tg, "_sl_eff"]
+            g_mu_sl  = g_sl.median()
+            g_mad_sl = (g_sl - g_mu_sl).abs().median()
+            g_sig_sl = g_mad_sl * 1.4826
+            _global_sigma_sl[(tg, mode)] = (
+                float(g_sig_sl) if (not pd.isna(g_sig_sl) and g_sig_sl > 1e-9) else 0.0
+            )
+
     for mode in unique_modes:
         mask_mode = (df["Mode"] == mode) if mode is not None else pd.Series(True, index=df.index)
         for br in unique_brs:
@@ -217,7 +262,9 @@ def score(df: pd.DataFrame, settings: dict) -> pd.DataFrame:
                 mad_sl   = (peers_sl - mu_sl).abs().median()
                 sigma_sl = mad_sl * 1.4826
                 if pd.isna(sigma_sl) or sigma_sl < 1e-9:
-                    sigma_sl = 1.0
+                    sigma_sl = _global_sigma_sl.get((tg, mode), 0.0)
+                if sigma_sl < 1e-9:
+                    continue
                 df.loc[mask_self, "_z_sl"] = (
                     (df.loc[mask_self, "_sl_eff"] - mu_sl) / sigma_sl
                 ).clip(-z_clip, z_clip)
