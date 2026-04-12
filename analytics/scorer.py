@@ -31,14 +31,26 @@ def score(df: pd.DataFrame, settings: dict) -> pd.DataFrame:
     mm_window = float(settings.get("mm_window",     1.0))
     sig_scale = float(settings.get("sigmoid_scale", 1.5))
     z_clip    = float(settings.get("z_clip",         3.0))
+    C_battles = float(settings.get("c_battles", 5000.0))
+    C_spawns  = float(settings.get("c_spawns",  7500.0))
+    C_deaths  = float(settings.get("c_deaths",  3000.0))
 
     spawns = df["Возрождения"].clip(lower=1)
+    deaths = df["Смерти"].clip(lower=0)
+
     df["_ks_g_raw"] = df["Наземные убийства"]  / spawns
     df["_ks_a_raw"] = df["Воздушные убийства"] / spawns
     df["_ks_n_raw"] = df["Морские убийства"]   / spawns
     df["_kd_raw"]   = df["KD"]
-    df["_surv_raw"] = (1.0 - (df["Смерти"] / spawns)).clip(0.0, 1.0)
+    df["_surv_raw"] = (1.0 - (deaths / spawns)).clip(0.0, 1.0)
     df["_wr_raw"]   = (df["WR"] / 100.0).clip(0.0, 1.0)
+
+    df["_total_kills"]      = (
+        df["Наземные убийства"] +
+        df["Воздушные убийства"] +
+        df["Морские убийства"]
+    )
+    df["_survival_events"]  = (spawns - deaths).clip(lower=0)
 
     df["_type_group"] = df["Type"].map(VEHICLE_TYPE_CATEGORY).fillna("_other")
 
@@ -49,30 +61,6 @@ def score(df: pd.DataFrame, settings: dict) -> pd.DataFrame:
 
     for k in metric_keys:
         df[k] = 0.0
-
-    _c_battles_lookup: dict[tuple, float] = {}
-    _c_spawns_lookup:  dict[tuple, float] = {}
-
-    for mode in unique_modes:
-        mask_mode = (df["Mode"] == mode) if mode is not None else pd.Series(True, index=df.index)
-        for br in unique_brs:
-            for tg in type_groups:
-                mask_peer = (
-                    (df["BR"] >= br - mm_window) &
-                    (df["BR"] <= br + mm_window) &
-                    (df["_type_group"] == tg) &
-                    mask_mode
-                )
-                peers = df.loc[mask_peer]
-                if peers.empty:
-                    fallback = df.loc[mask_mode & (df["_type_group"] == tg), "Сыграно игр"]
-                    _c_battles_lookup[(br, tg, mode)] = float(fallback.median()) if not fallback.empty else 1000.0
-                    fallback_s = df.loc[mask_mode & (df["_type_group"] == tg), "Возрождения"]
-                    _c_spawns_lookup[(br, tg, mode)]  = float(fallback_s.median()) if not fallback_s.empty else 1500.0
-                else:
-                    _c_battles_lookup[(br, tg, mode)] = float(peers["Сыграно игр"].median())
-                    _c_spawns_lookup[(br, tg, mode)]  = float(peers["Возрождения"].median())
-
 
     for mode in unique_modes:
         mask_mode = (df["Mode"] == mode) if mode is not None else pd.Series(True, index=df.index)
@@ -91,18 +79,16 @@ def score(df: pd.DataFrame, settings: dict) -> pd.DataFrame:
                     continue
 
                 avg_wr   = _weighted_avg(peers["_wr_raw"],   peers["Сыграно игр"])
-                avg_kd   = _weighted_avg(peers["_kd_raw"],   peers["Сыграно игр"])
+                avg_kd   = _weighted_avg(peers["_kd_raw"],   peers["Смерти"].clip(lower=1))
                 avg_ks_g = _weighted_avg(peers["_ks_g_raw"], peers["Возрождения"])
                 avg_ks_a = _weighted_avg(peers["_ks_a_raw"], peers["Возрождения"])
                 avg_ks_n = _weighted_avg(peers["_ks_n_raw"], peers["Возрождения"])
-                avg_surv = _weighted_avg(peers["_surv_raw"],  peers["Возрождения"])
+                avg_surv = _weighted_avg(peers["_surv_raw"], peers["Возрождения"])
 
                 row_slice = df.loc[mask_self]
                 n_g = row_slice["Сыграно игр"]
                 n_s = row_slice["Возрождения"]
-
-                C_battles = _c_battles_lookup[(br, tg, mode)]
-                C_spawns  = _c_spawns_lookup[(br, tg, mode)]
+                n_d = row_slice["Смерти"].clip(lower=0)
 
                 df.loc[mask_self, "_wr"] = (
                     (row_slice["_wr_raw"] * n_g + avg_wr * C_battles)
@@ -110,24 +96,24 @@ def score(df: pd.DataFrame, settings: dict) -> pd.DataFrame:
                 ) * 100.0
 
                 df.loc[mask_self, "_kd"] = (
-                    (row_slice["_kd_raw"] * n_g + avg_kd * C_battles)
-                    / (n_g + C_battles)
+                    (row_slice["_total_kills"] + avg_kd * C_deaths)
+                    / (n_d + C_deaths)
                 )
 
                 df.loc[mask_self, "_ks_g"] = (
-                    (row_slice["_ks_g_raw"] * n_s + avg_ks_g * C_spawns)
+                    (row_slice["Наземные убийства"] + avg_ks_g * C_spawns)
                     / (n_s + C_spawns)
                 )
                 df.loc[mask_self, "_ks_a"] = (
-                    (row_slice["_ks_a_raw"] * n_s + avg_ks_a * C_spawns)
+                    (row_slice["Воздушные убийства"] + avg_ks_a * C_spawns)
                     / (n_s + C_spawns)
                 )
                 df.loc[mask_self, "_ks_n"] = (
-                    (row_slice["_ks_n_raw"] * n_s + avg_ks_n * C_spawns)
+                    (row_slice["Морские убийства"] + avg_ks_n * C_spawns)
                     / (n_s + C_spawns)
                 )
                 df.loc[mask_self, "_surv"] = (
-                    (row_slice["_surv_raw"] * n_s + avg_surv * C_spawns)
+                    (row_slice["_survival_events"] + avg_surv * C_spawns)
                     / (n_s + C_spawns)
                 )
 

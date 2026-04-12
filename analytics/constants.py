@@ -75,6 +75,9 @@ DEFAULT_SETTINGS: dict = {
     "sigmoid_scale": 1.5,
     "z_clip":        3.0,
     "wilson_z":      1.96,
+    "c_battles":     5000,
+    "c_spawns":      7500,
+    "c_deaths":      3000,
 }
 
 def snap_to_wt_br(br: float) -> float:
