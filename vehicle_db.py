@@ -364,7 +364,7 @@ class VehicleDB:
             if sample_missing:
                 print(
                     f"[VehicleDB] ⚠️  Not found {total - matched} entries, "
-                    f"первые 10: {sample_missing}"
+                    f"first 10: {sample_missing}"
                 )
 
             if self._units.loaded and "Name" in df.columns:

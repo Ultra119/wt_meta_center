@@ -108,7 +108,7 @@ def _process_period(
                 and mode in core.full_df["Mode"].values
             )
             if not has_mode:
-                print(f"   ⚠️   {mode} не найден в периоде '{period_label}' — пропуск")
+                print(f"   ⚠️   {mode} not found in the '{period_label}' period — skipped")
                 continue
 
             filters = {
@@ -124,17 +124,17 @@ def _process_period(
 
             df_mode = core.calculate_meta(filters)
             if df_mode.empty:
-                print(f"   ℹ️   Нет данных: {mode} / '{period_label}'")
+                print(f"   ℹ️   No data available: {mode} / '{period_label}'")
                 continue
 
             records = _df_to_records(df_mode)
             unmatched = [r for r in records if not r.get("vdb_match_score")]
             if unmatched:
                 names = list({r.get("vdb_identifier") or r.get("Name", "?") for r in unmatched})
-                print(f"   ⚠️   {len(unmatched)} записей без VDB-матча (только статистика): {names[:5]}")
+                print(f"   ⚠️   {len(unmatched)} records without a VDB match (statistics only): {names[:5]}")
 
             all_records.extend(records)
-            print(f"   ✅  {mode}: {len(records)} записей")
+            print(f"   ✅  {mode}: {len(records)} records")
 
     finally:
         core.full_df = original_df
@@ -145,17 +145,17 @@ def _process_period(
 def main() -> None:
     t0 = time.perf_counter()
     print("=" * 60)
-    print("  WT META Center — Data Pipeline  (multi-period)")
+    print("  WT META Center — Data Pipeline")
     print(f"  {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 60)
 
     core = AnalyticsCore()
     ok   = core.load_data_recursive()
     if not ok or core.full_df.empty:
-        print("❌  Данные не загружены. Проверьте папку dataset/stats/")
+        print("❌  Data has not been loaded. Check the dataset/stats/ folder.")
         sys.exit(1)
 
-    print(f"✅  full_df: {len(core.full_df)} строк")
+    print(f"✅  full_df: {len(core.full_df)} strings")
 
     raw_periods: list[str] = []
     if "Period" in core.full_df.columns:
@@ -167,11 +167,11 @@ def main() -> None:
     raw_periods.sort(key=_period_sort_key, reverse=True)
     all_period_labels = ["All"] + raw_periods
 
-    print(f"📅  Периодов: {len(raw_periods)}  →  {raw_periods or '(нет)'}")
+    print(f"📅  Periods: {len(raw_periods)}  →  {raw_periods or '(none)'}")
 
-    print("\n▶  Агрегация всех периодов → All")
+    print("\n▶  Aggregate all periods → All")
     all_df = core.aggregate_all_periods(core.full_df)
-    print(f"   ✅  {len(all_df)} уникальных записей (Name+Mode+Nation+Type+BR)")
+    print(f"   ✅  {len(all_df)} unique records (Name+Mode+Nation+Type+BR)")
 
     period_dfs: dict[str, pd.DataFrame] = {"All": all_df}
     for p in raw_periods:
@@ -184,13 +184,13 @@ def main() -> None:
         period_df = period_dfs.get(period_label, pd.DataFrame())
 
         if period_df.empty:
-            print("   ⚠️   Нет данных — пропуск")
+            print("   ⚠️   No data — skip")
             continue
 
         records = _process_period(core, period_df, period_label)
 
         if not records:
-            print("   ⚠️   Список записей пуст — файл не записан")
+            print("   ⚠️   The list of entries is empty—the file has not been saved")
             continue
 
         out_path = os.path.join(DATA_DIR, f"mega_db_{period_label}.json")
@@ -198,11 +198,11 @@ def main() -> None:
         with open(out_path, "w", encoding="utf-8") as f:
             json.dump(records, f, ensure_ascii=False, separators=(",", ":"))
         size_mb = os.path.getsize(out_path) / 1_048_576
-        print(f"   ✅  {len(records)} записей · {size_mb:.2f} MB")
+        print(f"   ✅  {len(records)} records · {size_mb:.2f} MB")
         period_record_counts[period_label] = len(records)
 
     if not period_record_counts:
-        print("\n❌  Ни один период не дал данных — meta_info.json не записан")
+        print("\n❌  No data was found for any period — meta_info.json was not saved")
         sys.exit(1)
 
     all_nations_raw = (
@@ -234,12 +234,12 @@ def main() -> None:
     with open(OUT_META, "w", encoding="utf-8") as f:
         json.dump(meta_info, f, ensure_ascii=False, indent=2)
     print(
-        f"   ✅  {len(nations_list)} наций · {len(all_types)} типов · "
-        f"{len(all_period_labels)} периодов"
+        f"   ✅  {len(nations_list)} nations · {len(all_types)} types · "
+        f"{len(all_period_labels)} periods"
     )
 
     elapsed = time.perf_counter() - t0
-    print(f"\n✅  Готово за {elapsed:.1f}с")
+    print(f"\n✅  Done in {elapsed:.1f} seconds")
     print("=" * 60)
 
 

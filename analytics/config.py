@@ -12,9 +12,9 @@ def load_settings(script_dir: str) -> dict:
         try:
             with open(settings_path, "w", encoding="utf-8") as f:
                 json.dump(DEFAULT_SETTINGS, f, ensure_ascii=False, indent=4)
-            log_debug("settings.json создан с дефолтными значениями.")
+            log_debug("settings.json has been created with default values.")
         except Exception as e:
-            log_debug(f"Не удалось создать settings.json: {e}")
+            log_debug(f"Failed to create settings.json: {e}")
         return dict(DEFAULT_SETTINGS)
 
     try:
@@ -23,9 +23,9 @@ def load_settings(script_dir: str) -> dict:
 
         merged = dict(DEFAULT_SETTINGS)
         merged.update(loaded)
-        log_debug(f"settings.json загружен: {merged}")
+        log_debug(f"settings.json downloaded: {merged}")
         return merged
 
     except Exception as e:
-        log_debug(f"Ошибка чтения settings.json, используются дефолты: {e}")
+        log_debug(f"Error reading settings.json; defaults are being used: {e}")
         return dict(DEFAULT_SETTINGS)

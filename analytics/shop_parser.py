@@ -25,7 +25,7 @@ _VAL_FLAGS = frozenset({"showOnlyWhenBought"})
 def _try_download(dest: str) -> None:
     try:
         os.makedirs(os.path.dirname(dest), exist_ok=True)
-        print(f"[ShopParser] 📥 Скачиваем shop.blkx из War-Thunder-Datamine …")
+        print(f"[ShopParser] 📥 Download shop.blkx from War-Thunder-Datamine …")
         req = urllib.request.Request(
             SHOP_URL,
             headers={"User-Agent": "WTMetaCenter/1.0"},
@@ -33,10 +33,10 @@ def _try_download(dest: str) -> None:
         with urllib.request.urlopen(req, timeout=_DOWNLOAD_TIMEOUT) as resp, \
              open(dest, "wb") as out_f:
             out_f.write(resp.read())
-        print(f"[ShopParser] ✅ Скачан и сохранён → {dest}")
+        print(f"[ShopParser] ✅ Downloaded and saved → {dest}")
     except Exception as e:
-        print(f"[ShopParser] ❌ Не удалось скачать shop.blkx: {e}")
-        print( "[ShopParser]    Положите файл вручную: dataset/shop.blkx")
+        print(f"[ShopParser] ❌ Unable to download shop.blkx: {e}")
+        print( "[ShopParser]    Upload the file manually: dataset/shop.blkx")
         print(f"[ShopParser]    URL: {SHOP_URL}")
 
 
@@ -73,14 +73,14 @@ def parse_shop_file(path: str) -> dict[str, dict]:
         _try_download(path)
 
     if not os.path.exists(path):
-        print("[ShopParser] ⚠️  shop.blkx недоступен — порядок дерева отключён")
+        print("[ShopParser] ⚠️  shop.blkx is unavailable — tree order is disabled")
         return {}
 
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
     except Exception as e:
-        print(f"[ShopParser] ❌ Ошибка чтения shop.blkx: {e}")
+        print(f"[ShopParser] ❌ Error reading shop.blkx: {e}")
         return {}
 
     result: dict[str, dict] = {}
@@ -113,5 +113,5 @@ def parse_shop_file(path: str) -> dict[str, dict]:
                         "shop_is_event": is_event,
                     }
 
-    print(f"[ShopParser] ✅ Распарсено {len(result)} позиций из shop.blkx")
+    print(f"[ShopParser] ✅ {len(result)} items from shop.blkx have been parsed")
     return result

@@ -66,8 +66,8 @@ class UnitsCsvTranslator:
             self._try_download(path)
         if not os.path.exists(path):
             print(
-                "[UnitsCsv] ⚠️  units.csv недоступен — имена техники будут "
-                "браться из исходных данных без нормализации"
+                "[UnitsCsv] ⚠️  units.csv is unavailable — equipment names will be "
+                "taken from the source data without normalization"
             )
             return
         self._parse(path)
@@ -75,7 +75,7 @@ class UnitsCsvTranslator:
     def _try_download(self, dest: str) -> None:
         try:
             os.makedirs(os.path.dirname(dest), exist_ok=True)
-            print("[UnitsCsv] 📥 Скачиваем units.csv из War-Thunder-Datamine …")
+            print("[UnitsCsv] 📥 Download units.csv from War-Thunder-Datamine …")
             req = urllib.request.Request(
                 UNITS_CSV_URL,
                 headers={"User-Agent": "WTMetaCenter/1.0"},
@@ -83,10 +83,10 @@ class UnitsCsvTranslator:
             with urllib.request.urlopen(req, timeout=_DOWNLOAD_TIMEOUT) as resp, \
                     open(dest, "wb") as out_f:
                 out_f.write(resp.read())
-            print(f"[UnitsCsv] ✅ Скачан и сохранён → {dest}")
+            print(f"[UnitsCsv] ✅ Downloaded and saved → {dest}")
         except Exception as e:
-            print(f"[UnitsCsv] ❌ Не удалось скачать units.csv: {e}")
-            print( "[UnitsCsv]    Положите файл вручную: dataset/units.csv")
+            print(f"[UnitsCsv] ❌ Unable to download units.csv: {e}")
+            print( "[UnitsCsv]    Upload the file manually: dataset/units.csv")
             print(f"[UnitsCsv]    URL: {UNITS_CSV_URL}")
 
     def _parse(self, path: str) -> None:
@@ -134,11 +134,11 @@ class UnitsCsvTranslator:
                     count_parsed += 1
 
         except Exception as e:
-            print(f"[UnitsCsv] ❌ Ошибка парсинга units.csv: {e}")
+            print(f"[UnitsCsv] ❌ Error parsing units.csv: {e}")
             return
 
         self.loaded = True
         print(
-            f"[UnitsCsv] ✅ Загружено {count_parsed} записей "
-            f"({len(self._en_to_id)} уникальных имён) из units.csv"
+            f"[UnitsCsv] ✅ {count_parsed} records loaded "
+            f"({len(self._en_to_id)} (unique names) from units.csv"
         )

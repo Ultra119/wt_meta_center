@@ -81,5 +81,4 @@ DEFAULT_SETTINGS: dict = {
 }
 
 def snap_to_wt_br(br: float) -> float:
-    """Округляет произвольный BR к ближайшему реальному значению War Thunder."""
     return min(WT_BR_STEPS, key=lambda x: abs(x - br))
