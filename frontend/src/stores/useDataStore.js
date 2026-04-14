@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, shallowRef, computed, watch, watchEffect, nextTick } from 'vue'
+import { ref, shallowRef, computed, watch, watchEffect } from 'vue'
 
 export const WT_BR_STEPS = [
   1.0,1.3,1.7, 2.0,2.3,2.7, 3.0,3.3,3.7, 4.0,4.3,4.7,
@@ -156,17 +156,25 @@ export const useDataStore = defineStore('data', () => {
   })
 
   const filteredVehicles = shallowRef([])
+  const filtering = ref(false)
+
+  let _filterVersion = 0
 
   watchEffect(() => {
-    const vehicles  = allVehicles.value
-    const mode      = _mode.value
-    const brMin     = _brRange.value[0]
-    const brMax     = _brRange.value[1]
-    const minB      = _minBattles.value
-    const cls       = _classes.value
-    const types     = activeTypes.value
+    const vehicles = allVehicles.value
+    const mode     = _mode.value
+    const brMin    = _brRange.value[0]
+    const brMax    = _brRange.value[1]
+    const minB     = _minBattles.value
+    const cls      = _classes.value
+    const types    = activeTypes.value
 
-    nextTick(() => {
+    const version = ++_filterVersion
+
+    filtering.value = true
+
+    setTimeout(() => {
+      if (version !== _filterVersion) return
       filteredVehicles.value = !vehicles.length ? [] : vehicles.filter(v =>
         v.Mode === mode &&
         v.BR   >= brMin &&
@@ -175,7 +183,8 @@ export const useDataStore = defineStore('data', () => {
         cls.includes(v.VehicleClass ?? 'Standard') &&
         types.includes(v.Type)
       )
-    })
+      filtering.value = false
+    }, 0)
   })
 
   const nations = computed(() => {
@@ -188,7 +197,7 @@ export const useDataStore = defineStore('data', () => {
     currentPeriod, periods,
     mode, minBattles, brRange, classes,
     showGround, showAviation, showHelicopters, showLargeFleet, showSmallFleet,
-    filteredVehicles, activeTypes, nations,
+    filteredVehicles, activeTypes, nations, filtering,
     loadData,
     tabFilterConfig, setTabFilters, clearTabFilters,
     BR_MIN, BR_MAX, WT_BR_STEPS,
