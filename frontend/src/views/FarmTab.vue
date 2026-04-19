@@ -191,7 +191,7 @@ import { useTabFilters }   from '../composables/useTabFilters.js'
 import { useDataStore, WT_BR_STEPS } from '../stores/useDataStore.js'
 import {
   vehicleDisplayName, vehicleClassMdiIcon, vehicleClassMdiColor,
-  farmColor, fmtBR, normRow,
+  farmColor, fmtBR, fmtNation, normRow,
 } from '../composables/useVehicleFormatting.js'
 import InfoTip from '../components/InfoTip.vue'
 
@@ -208,7 +208,7 @@ const targetBr   = computed(() => WT_BR_STEPS[brIndex.value])
 const nation = ref('All')
 const nationItems = computed(() =>
   (store.nations ?? []).map(n => ({
-    title: n === 'All' ? t('common.all') : n,
+    title: n === 'All' ? t('common.all') : fmtNation(n),
     value: n,
   }))
 )
