@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sys
@@ -60,6 +61,20 @@ _WT_NATIONS = {
 }
 
 _WT_NATIONS_LOWER = {n.lower() for n in _WT_NATIONS}
+
+def _compute_dataset_hash(stats_dir: str) -> str:
+    h = hashlib.sha256()
+    for root, _dirs, files in os.walk(stats_dir):
+        for fname in sorted(files):
+            if not fname.endswith(".json"):
+                continue
+            path = os.path.join(root, fname)
+            h.update(path.encode())
+            with open(path, "rb") as f:
+                for chunk in iter(lambda: f.read(65536), b""):
+                    h.update(chunk)
+    return h.hexdigest()
+
 
 def _safe_val(v):
     import math
@@ -155,6 +170,23 @@ def main() -> None:
         print("❌  Data has not been loaded. Check the dataset/stats/ folder.")
         sys.exit(1)
 
+    stats_dir    = os.path.join(PROJECT_DIR, "dataset", "stats")
+    dataset_hash = _compute_dataset_hash(stats_dir)
+    print(f"🔑  Dataset hash: {dataset_hash[:16]}…")
+
+    old_generated_at: str | None = None
+    if os.path.exists(OUT_META):
+        try:
+            with open(OUT_META, "r", encoding="utf-8") as f:
+                old_meta = json.load(f)
+            if old_meta.get("dataset_hash") == dataset_hash:
+                old_generated_at = old_meta.get("generated_at")
+                print(f"✅  Dataset unchanged — keeping generated_at: {old_generated_at}")
+        except Exception:
+            pass
+
+    generated_at = old_generated_at or datetime.now(timezone.utc).isoformat()
+
     print(f"✅  full_df: {len(core.full_df)} strings")
 
     raw_periods: list[str] = []
@@ -219,7 +251,8 @@ def main() -> None:
     )
 
     meta_info = {
-        "generated_at":    datetime.now(timezone.utc).isoformat(),
+        "generated_at":    generated_at,
+        "dataset_hash":    dataset_hash,
         "periods":         all_period_labels,    # ["All", "10-2023", ...]
         "nations":         nations_list,
         "types":           all_types,
