@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force full rebuild even if nothing changed'
+        type: boolean
+        default: false
 
 jobs:
   build-and-deploy:
@@ -12,6 +17,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -21,10 +28,67 @@ jobs:
       - name: Install Python deps
         run: pip install -r requirements.txt
 
+      - name: Detect changes
+        id: changes
+        run: |
+          DATASET_HASH=$(python3 -c "
+          import hashlib, os
+          h = hashlib.sha256()
+          for root, _, files in os.walk('dataset/stats'):
+              for fname in sorted(files):
+                  if not fname.endswith('.json'): continue
+                  path = os.path.join(root, fname)
+                  h.update(path.encode())
+                  with open(path, 'rb') as f:
+                      for chunk in iter(lambda: f.read(65536), b''): h.update(chunk)
+          print(h.hexdigest())
+          ")
+          echo "dataset_hash=$DATASET_HASH" >> $GITHUB_OUTPUT
+          echo "Dataset hash: ${DATASET_HASH:0:16}…"
+
+          git fetch origin gh-pages --depth=1 2>/dev/null || true
+          DEPLOYED_HASH=$(git show origin/gh-pages:meta_info.json 2>/dev/null \
+            | python3 -c "import sys,json; print(json.load(sys.stdin).get('dataset_hash',''))" \
+            2>/dev/null || echo "")
+
+          if [ "$DATASET_HASH" != "$DEPLOYED_HASH" ]; then
+            echo "dataset_changed=true"  >> $GITHUB_OUTPUT
+            echo "Dataset: CHANGED (deployed=${DEPLOYED_HASH:0:16}…)"
+          else
+            echo "dataset_changed=false" >> $GITHUB_OUTPUT
+            echo "Dataset: unchanged"
+          fi
+
+          if git diff --quiet HEAD~1 HEAD -- frontend/ 2>/dev/null; then
+            echo "frontend_changed=false" >> $GITHUB_OUTPUT
+            echo "Frontend: unchanged"
+          else
+            echo "frontend_changed=true"  >> $GITHUB_OUTPUT
+            echo "Frontend: CHANGED"
+          fi
+
+          FORCE="${{ github.event.inputs.force }}"
+          DISPATCH="${{ github.event_name }}"
+          if [ "$DATASET_HASH" != "$DEPLOYED_HASH" ] \
+              || ! git diff --quiet HEAD~1 HEAD -- frontend/ 2>/dev/null \
+              || [ "$DISPATCH" = "workflow_dispatch" ] \
+              || [ "$FORCE" = "true" ]; then
+            echo "should_deploy=true"  >> $GITHUB_OUTPUT
+            echo "→ Deploy: YES"
+          else
+            echo "should_deploy=false" >> $GITHUB_OUTPUT
+            echo "→ Deploy: SKIP (nothing changed)"
+          fi
+
       - name: Build mega_db.json
+        if: |
+          steps.changes.outputs.dataset_changed == 'true' ||
+          github.event.inputs.force == 'true' ||
+          github.event_name == 'workflow_dispatch'
         run: python build_data.py
 
       - name: Set up Node
+        if: steps.changes.outputs.should_deploy == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '25'
@@ -32,14 +96,17 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install JS deps
+        if: steps.changes.outputs.should_deploy == 'true'
         working-directory: frontend
         run: npm install
 
       - name: Vite build
+        if: steps.changes.outputs.should_deploy == 'true'
         working-directory: frontend
         run: VITE_BASE_PATH=/WTMETACenter/ VITE_GA_ID=${{ secrets.GA_ID }} npm run build
 
       - name: Deploy to GitHub Pages
+        if: steps.changes.outputs.should_deploy == 'true'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}

@@ -97,8 +97,10 @@ export const useDataStore = defineStore('data', () => {
   watch(minBattles, v => commitBattles(v))
 
   async function _loadVehicles() {
-    const url = `${_basePath.value}/data/mega_db_${currentPeriod.value}.json`
-    const res = await fetch(url)
+    const hash = metaInfo.value?.dataset_hash ?? ''
+    const qs   = hash ? `?v=${hash.slice(0, 8)}` : ''
+    const url  = `${_basePath.value}/data/mega_db_${currentPeriod.value}.json${qs}`
+    const res  = await fetch(url)
     if (!res.ok) throw new Error(`mega_db_${currentPeriod.value}.json: ${res.status}`)
     allVehicles.value = await res.json()
   }
