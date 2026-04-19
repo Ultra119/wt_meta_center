@@ -149,21 +149,3 @@ const headers = computed(() => [
 .cell-name { font-weight: 600; color: #e2e8f0; }
 .cell-class-icon { margin-right: 4px; vertical-align: middle; opacity: 0.85; }
 </style>
-
-<style>
-.wt-table .v-data-table__thead th {
-  background: #1e293b !important; color: #a7f3d0 !important;
-  font-family: 'Rajdhani', sans-serif !important; font-weight: 600 !important;
-  font-size: 11px !important; letter-spacing: .1em !important; text-transform: uppercase !important;
-  border-bottom: 1px solid #1e3a5f !important;
-}
-.wt-table .v-data-table__tbody td {
-  color: #e2e8f0 !important;
-  font-family: 'JetBrains Mono', monospace !important;
-  font-size: 12px !important; border-bottom: 1px solid #1e293b !important; cursor: pointer;
-}
-.wt-table .row-odd  td { background: #0f172a !important; }
-.wt-table .row-even td { background: #111d30 !important; }
-.wt-table tr:hover td,
-.wt-table .v-data-table__tr--hover td { background: #1e3a5f !important; }
-</style>

@@ -369,90 +369,9 @@ function totalColor(total) {
   flex-wrap: wrap;
   gap: 16px;
 }
-.ctrl-divider {
-  width: 1px;
-  height: 36px;
-  background: #1e3a5f;
-  flex-shrink: 0;
-}
-.ctrl-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: .07em;
-  color: #475569;
-  display: block;
-  margin-bottom: 4px;
-}
-.ml-auto { margin-left: auto; }
 
-.folder-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  cursor: pointer;
-  user-select: none;
-}
-.folder-toggle__input {
-  position: absolute;
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-.folder-toggle__box {
-  width: 28px;
-  height: 28px;
-  border: 1px solid #1e3a5f;
-  border-radius: 6px;
-  background: transparent;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s, border-color 0.15s;
-}
-.folder-toggle:has(input:checked) .folder-toggle__box {
-  background: rgba(56,189,248,0.12);
-  border-color: rgba(56,189,248,0.5);
-}
-.folder-toggle__icon {
-  font-size: 15px;
-  color: #475569;
-  transition: color 0.15s;
-}
-.folder-toggle:has(input:checked) .folder-toggle__icon {
-  color: #38bdf8;
-}
-.folder-toggle__label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #64748b;
-  transition: color 0.15s;
-}
-.folder-toggle:hover .folder-toggle__label { color: #94a3b8; }
-.folder-toggle:has(input:checked) .folder-toggle__label { color: #38bdf8; }
-
-.metric-group { display: flex; gap: 4px; }
-.metric-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
-  border-radius: 6px;
-  border: 1px solid #1e3a5f;
-  background: transparent;
-  color: #64748b;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all .15s;
-}
 .metric-btn:hover { border-color: #334155; color: #94a3b8; }
-.metric-btn.active {
-  border-color: rgba(56,189,248,0.5);
-  background: rgba(56,189,248,0.12);
-  color: #38bdf8;
-}
 .tip-icon  { font-size: 14px; color: #475569; flex-shrink: 0; }
-.metric-icon { font-size: 15px; }
 .branch-icon { font-size: 20px; color: #a7f3d0; }
 
 .era-legend {
@@ -633,12 +552,4 @@ function totalColor(total) {
 }
 .cheap-dot     { background: #4ade80; }
 .expensive-dot { background: #f87171; }
-
-.no-data {
-  font-size: 12px;
-  color: #475569;
-  padding: 16px 0;
-  text-align: center;
-  font-style: italic;
-}
 </style>

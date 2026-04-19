@@ -9,6 +9,8 @@ import router from './router/index.js'
 import i18n   from './i18n/index.js'
 import App    from './app.vue'
 
+import './styles/global.css'
+
 const GA_ID = import.meta.env.VITE_GA_ID
 if (GA_ID) {
   const s = document.createElement('script')

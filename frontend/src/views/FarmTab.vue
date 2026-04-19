@@ -328,29 +328,9 @@ const gemHeaders = computed(() => [
 </script>
 
 <style scoped>
-.controls-bar {
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid #1e3a5f;
-  border-radius: 10px;
-  padding: 12px 16px;
-}
-.controls-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 14px;
-}
-.ctrl-divider {
-  align-self: stretch;
-  opacity: 0.3;
-}
-.ml-auto { margin-left: auto; }
+.ctrl-divider { align-self: stretch; opacity: 0.3; }
 
-.br-slider-wrap {
-  min-width: 200px;
-  max-width: 280px;
-  flex: 1;
-}
+.br-slider-wrap   { min-width: 200px; max-width: 280px; flex: 1; }
 .br-slider-header {
   display: flex;
   align-items: center;
@@ -385,17 +365,9 @@ const gemHeaders = computed(() => [
   border-radius: 10px;
   padding: 12px 16px;
 }
-.anchor-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.anchor-icon { flex-shrink: 0; }
-.anchor-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
+.anchor-left  { display: flex; align-items: center; gap: 12px; }
+.anchor-icon  { flex-shrink: 0; }
+.anchor-info  { display: flex; flex-direction: column; gap: 2px; }
 .anchor-label {
   font-size: 10px;
   text-transform: uppercase;
@@ -408,14 +380,8 @@ const gemHeaders = computed(() => [
   font-weight: 700;
   color: #a7f3d0;
 }
-.anchor-br {
-  font-size: 12px;
-  color: #94a3b8;
-}
-.anchor-right {
-  text-align: right;
-  min-width: 100px;
-}
+.anchor-br { font-size: 12px; color: #94a3b8; }
+.anchor-right { text-align: right; min-width: 100px; }
 .anchor-score-label {
   font-size: 10px;
   color: #64748b;
@@ -443,11 +409,7 @@ const gemHeaders = computed(() => [
   transition: width 0.3s ease;
 }
 
-.section-header {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-}
+.section-header { display: flex; align-items: baseline; gap: 10px; }
 .section-title {
   font-family: 'Rajdhani', sans-serif;
   font-size: 13px;
@@ -457,51 +419,21 @@ const gemHeaders = computed(() => [
   text-transform: uppercase;
 }
 .gems-title { color: #a78bfa; }
-.section-sub {
-  font-size: 11px;
-  color: #475569;
-}
+.section-sub { font-size: 11px; color: #475569; }
 
-.table-wrap {
-  border: 1px solid #1e3a5f;
-  border-radius: 8px;
-  overflow: hidden;
-}
-.cell-name  { font-weight: 600; color: #e2e8f0; }
-.cell-class-icon { margin-right: 4px; vertical-align: middle; opacity: 0.85; }
 .cell-br    { font-family: 'Rajdhani', sans-serif; font-weight: 600; color: #94a3b8; }
 .cell-sl    { color: #34d399; font-weight: 600; }
 .cell-delta { color: #a78bfa; font-weight: 700; font-size: 12px; }
+.role-chip  { font-size: 10px !important; font-weight: 700; }
 
-.role-chip { font-size: 10px !important; font-weight: 700; }
-
-.score-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 80px;
-}
+.score-cell { display: flex; flex-direction: column; gap: 3px; min-width: 80px; }
 .score-bar-bg {
   height: 3px;
-  background: rgba(100,116,139,0.2);
+  background: rgba(100, 116, 139, 0.2);
   border-radius: 2px;
   overflow: hidden;
 }
-.score-bar-fill {
-  height: 100%;
-  border-radius: 2px;
-  transition: width 0.2s;
-}
+.score-bar-fill { height: 100%; border-radius: 2px; transition: width 0.2s; }
 
-.tip-icon {
-  flex-shrink: 0;
-  margin-top: 1px;
-}
-
-.text-muted-sm {
-  font-size: 11px;
-  color: #475569;
-  font-style: italic;
-  padding: 8px 0;
-}
+.text-muted-sm { font-size: 11px; color: #475569; font-style: italic; padding: 8px 0; }
 </style>

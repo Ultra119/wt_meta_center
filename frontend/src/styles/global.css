@@ -1,0 +1,189 @@
+.ml-auto { margin-left: auto; }
+
+
+.controls-bar {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid #1e3a5f;
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+.controls-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.ctrl-divider {
+  width: 1px;
+  height: 36px;
+  background: #1e3a5f;
+  flex-shrink: 0;
+}
+.ctrl-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: #475569;
+  display: block;
+  margin-bottom: 4px;
+}
+
+
+.table-wrap {
+  border: 1px solid #1e3a5f;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+
+.wt-table .v-data-table__thead th {
+  background: #1e293b !important;
+  color: #a7f3d0 !important;
+  font-family: 'Rajdhani', sans-serif !important;
+  font-weight: 600 !important;
+  font-size: 11px !important;
+  letter-spacing: .1em !important;
+  text-transform: uppercase !important;
+  border-bottom: 1px solid #1e3a5f !important;
+}
+
+.wt-table .v-data-table__tbody td {
+  color: #e2e8f0 !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 12px !important;
+  border-bottom: 1px solid #1e293b !important;
+  cursor: pointer;
+}
+
+.wt-table .row-odd  td { background: #0f172a !important; }
+.wt-table .row-even td { background: #111d30 !important; }
+
+.wt-table tr:hover td,
+.wt-table .v-data-table__tr--hover td { background: #1e3a5f !important; }
+
+
+.cell-name       { font-weight: 600; color: #e2e8f0; }
+.cell-score      { font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+.cell-class-icon { margin-right: 4px; vertical-align: middle; opacity: 0.85; }
+
+
+.seg-ctrl {
+  display: inline-flex;
+  gap: 4px;
+  background: rgba(10, 22, 40, 0.8);
+  padding: 3px;
+  border: 1px solid #1e3a5f;
+  border-radius: 8px;
+}
+.seg-btn {
+  padding: 5px 10px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: #475569;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.seg-btn:hover:not(.seg-btn--active) {
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.04);
+}
+.seg-btn--active {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.5);
+  color: #38bdf8;
+}
+.seg-btn-icon { vertical-align: middle; margin-right: 2px; }
+
+
+.metric-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid #1e3a5f;
+  background: transparent;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .15s, background .15s, color .15s;
+}
+.metric-btn:hover { border-color: #334155; color: #94a3b8; }
+.metric-btn.active {
+  border-color: rgba(56, 189, 248, 0.5);
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+}
+.metric-group { display: flex; gap: 4px; }
+.metric-icon  { font-size: 15px; }
+
+
+.folder-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  user-select: none;
+}
+.folder-toggle__input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.folder-toggle__box {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #1e3a5f;
+  border-radius: 6px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+}
+.folder-toggle:has(input:checked) .folder-toggle__box {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.5);
+}
+.folder-toggle__icon {
+  font-size: 15px;
+  color: #475569;
+  transition: color 0.15s;
+}
+.folder-toggle:has(input:checked) .folder-toggle__icon { color: #38bdf8; }
+.folder-toggle__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  transition: color 0.15s;
+}
+.folder-toggle:hover .folder-toggle__label          { color: #94a3b8; }
+.folder-toggle:has(input:checked) .folder-toggle__label { color: #38bdf8; }
+
+
+.tip-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 12px;
+}
+.tip-icon { font-size: 14px; color: #475569; flex-shrink: 0; }
+
+
+.no-data {
+  font-size: 12px;
+  color: #475569;
+  padding: 16px 0;
+  text-align: center;
+  font-style: italic;
+}

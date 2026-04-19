@@ -235,20 +235,6 @@ function scoreColor(score) {
 </script>
 
 <style scoped>
-.controls-bar {
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid #1e3a5f;
-  border-radius: 10px;
-  padding: 10px 14px;
-}
-.ml-auto { margin-left: auto; }
-.controls-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
 .excl-chips-row {
   display: flex;
   flex-direction: row;
