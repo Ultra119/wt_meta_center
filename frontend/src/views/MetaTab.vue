@@ -36,6 +36,7 @@
         fixed-header
         height="calc(100vh - 230px)"
         :sort-by="[{ key: 'META_SCORE', order: 'desc' }]"
+        :row-props="({ index }) => ({ class: index % 2 === 0 ? 'row-even' : 'row-odd' })"
         class="wt-table"
         @click:row="(_, { item }) => openVehicle(item)"
       >
@@ -159,9 +160,16 @@ const headers = computed(() => [
   border-bottom: 1px solid #1e3a5f !important;
 }
 .wt-table .v-data-table__tbody td {
-  background: #0f172a !important; color: #e2e8f0 !important;
+  color: #e2e8f0 !important;
   font-family: 'JetBrains Mono', monospace !important;
-  font-size: 12px !important; border-bottom: 1px solid #1e293b !important; cursor: pointer;
+  font-size: 12px !important;
+  border-bottom: 1px solid #1e293b !important;
+  cursor: pointer;
 }
-.wt-table .v-data-table__tbody tr:hover td { background: #1e293b !important; }
+
+.wt-table .row-odd  td { background: #0f172a !important; }
+.wt-table .row-even td { background: #111d30 !important; }
+
+.wt-table tr:hover td,
+.wt-table .v-data-table__tr--hover td { background: #1e3a5f !important; }
 </style>
