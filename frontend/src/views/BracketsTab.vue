@@ -287,8 +287,10 @@ function scoreColor(score) {
   font-size: 11px; letter-spacing: .08em; padding: 8px 12px; text-align: center;
   border-bottom: 1px solid #1e3a5f; white-space: nowrap; position: sticky; top: 0; z-index: 1;
 }
-.pivot-table tbody tr:hover td { background: #1e293b; }
-.pivot-table td { background: #0f172a; color: #e2e8f0; padding: 6px 12px; text-align: center; border-bottom: 1px solid #1e293b; }
+.pivot-table tbody tr:nth-child(even) td { background: #111d30; }
+.pivot-table tbody tr:nth-child(odd)  td { background: #0f172a; }
+.pivot-table tbody tr:hover td { background: #1e3a5f !important; }
+.pivot-table td { color: #e2e8f0; padding: 6px 12px; text-align: center; border-bottom: 1px solid #1e293b; }
 .br-col, .br-cell { text-align: left !important; padding-left: 14px !important; color: #94a3b8 !important; font-weight: 600; min-width: 100px; }
 .score-cell { font-weight: 600; }
 </style>
