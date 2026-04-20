@@ -192,8 +192,9 @@ def _build_vdb_row(v: dict) -> dict:
     row["vdb_shop_nation"] = ""
     row["vdb_shop_branch"] = ""
     row["vdb_shop_order"]  = 99999
-    row["vdb_shop_is_gift"]  = False
-    row["vdb_shop_is_event"] = False
+    row["vdb_shop_is_gift"]         = False
+    row["vdb_shop_is_event"]        = False
+    row["vdb_shop_is_research_only"] = False
 
     return row
 
@@ -262,8 +263,9 @@ class VehicleDB:
                 self._index[vid]["vdb_shop_nation"] = sdata["shop_nation"]
                 self._index[vid]["vdb_shop_branch"] = sdata["shop_branch"]
                 self._index[vid]["vdb_shop_order"]  = sdata["shop_order"]
-                self._index[vid]["vdb_shop_is_gift"]  = sdata.get("shop_is_gift",  False)
-                self._index[vid]["vdb_shop_is_event"] = sdata.get("shop_is_event", False)
+                self._index[vid]["vdb_shop_is_gift"]          = sdata.get("shop_is_gift",          False)
+                self._index[vid]["vdb_shop_is_event"]         = sdata.get("shop_is_event",         False)
+                self._index[vid]["vdb_shop_is_research_only"] = sdata.get("shop_is_research_only", False)
                 updated += 1
 
         print(
@@ -393,8 +395,9 @@ class VehicleDB:
                         "vdb_shop_nation":   sdata["shop_nation"],
                         "vdb_shop_branch":   sdata["shop_branch"],
                         "vdb_shop_order":    sdata["shop_order"],
-                        "vdb_shop_is_gift":  sdata.get("shop_is_gift",  False),
-                        "vdb_shop_is_event": sdata.get("shop_is_event", False),
+                        "vdb_shop_is_gift":          sdata.get("shop_is_gift",          False),
+                        "vdb_shop_is_event":         sdata.get("shop_is_event",         False),
+                        "vdb_shop_is_research_only": sdata.get("shop_is_research_only", False),
                         "vdb_identifier":    uid,
                     }
 

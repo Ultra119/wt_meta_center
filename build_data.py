@@ -37,7 +37,7 @@ _KEEP_COLS = [
     "vdb_has_thermal","vdb_has_atgm","vdb_has_heat","vdb_has_aphe",
     "vdb_ammo_types",
     "vdb_is_premium","vdb_is_pack","vdb_squadron_vehicle",
-    "vdb_on_marketplace","vdb_shop_is_gift","vdb_shop_is_event",
+    "vdb_on_marketplace","vdb_shop_is_gift","vdb_shop_is_event","vdb_shop_is_research_only",
     "vdb_shop_rank","vdb_era","vdb_country","vdb_identifier",
     "vdb_arcade_br","vdb_realistic_br","vdb_simulator_br",
     "vdb_repair_cost_realistic","vdb_repair_cost_arcade","vdb_repair_cost_simulator",
