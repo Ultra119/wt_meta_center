@@ -194,7 +194,10 @@
     "repair_rb":      "Repair (RB)",
     "sl_per_game":    "SL/game",
     "era":            "Era",
-    "no_vdb":         "—"
+    "no_vdb":         "—",
+    "br_arcade":      "Arcade Battles",
+    "br_realistic":   "Realistic Battles",
+    "br_simulator":   "Simulator Battles"
   },
 
   "vehicle_types": {

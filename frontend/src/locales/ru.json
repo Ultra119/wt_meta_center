@@ -194,7 +194,10 @@
     "repair_rb":      "Ремонт (RB)",
     "sl_per_game":    "SL за игру",
     "era":            "Эра",
-    "no_vdb":         "—"
+    "no_vdb":         "—",
+    "br_arcade":      "Аркадные бои",
+    "br_realistic":   "Реалистичные бои",
+    "br_simulator":   "Симуляторные бои"
   },
 
   "vehicle_types": {

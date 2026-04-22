@@ -8,7 +8,20 @@
         <v-chip v-if="vehicle.VehicleClass !== 'Standard'" :color="classColor" size="x-small" class="mr-2">
           {{ t(`vehicle_classes.${vehicle.VehicleClass}`) }}
         </v-chip>
-        <span class="br-badge">BR {{ fmtBR(vehicle.BR) }}</span>
+
+        <div class="br-modes">
+          <span
+            v-for="m in BR_MODES"
+            :key="m.key"
+            class="br-pill"
+            :class="{ 'br-pill--active': m.key === vehicle.Mode }"
+            :title="m.label"
+          >
+            <span class="br-pill__mode">{{ m.short }}</span>
+            <span class="br-pill__val">{{ brByMode[m.key] ?? '—' }}</span>
+          </span>
+        </div>
+
         <v-btn icon="mdi-close" variant="text" size="small" :title="t('common.close')" @click="$emit('update:modelValue', false)" />
       </v-card-title>
 
@@ -21,6 +34,7 @@
             <div class="section-title"><v-icon size="12" style="margin-right:4px;opacity:.7">mdi-chart-bar</v-icon>{{ t('vehicle_card.stats') }}</div>
             <div class="stat-row"><span class="stat-label">{{ t('vehicle_card.nation')  }}</span><span class="stat-value">{{ fmtNation(vehicle.Nation) }}</span></div>
             <div class="stat-row"><span class="stat-label">{{ t('vehicle_card.type')    }}</span><span class="stat-value">{{ fmtType(vehicle.Type) }}</span></div>
+
             <div class="stat-row"><span class="stat-label">{{ t('vehicle_card.battles') }}</span><span class="stat-value">{{ (vehicle['Сыграно игр'] ?? 0).toLocaleString() }}</span></div>
             <div class="stat-row"><span class="stat-label">{{ t('vehicle_card.wr')      }}</span><span class="stat-value" :style="{ color: wrColor(vehicle.WR) }">{{ vehicle.WR?.toFixed(1) }}%</span></div>
             <div class="stat-row"><span class="stat-label">{{ t('vehicle_card.kd')      }}</span><span class="stat-value">{{ vehicle.KD?.toFixed(2) }}</span></div>
@@ -133,19 +147,52 @@
 <script setup>
 import { computed } from 'vue'
 import { useI18n }  from 'vue-i18n'
+import { useDataStore } from '../stores/useDataStore.js'
 import {
   vehicleDisplayName, fmtType, fmtNation, fmtBR, fmtSL,
   metaColor, farmColor, wrColor,
 } from '../composables/useVehicleFormatting.js'
 
 const { t } = useI18n()
+const store  = useDataStore()
 
 const props = defineProps({ modelValue: Boolean, vehicle: Object })
 defineEmits(['update:modelValue'])
 
+const BR_MODES = [
+  { key: 'Arcade',    short: 'AB', label: t('vehicle_card.br_arcade')    },
+  { key: 'Realistic', short: 'RB', label: t('vehicle_card.br_realistic') },
+  { key: 'Simulator', short: 'SB', label: t('vehicle_card.br_simulator') },
+]
+
 const veh      = computed(() => props.vehicle ?? {})
 const hasVdb   = computed(() => (veh.value?.vdb_match_score ?? 0) > 0)
 const displayName = computed(() => vehicleDisplayName(veh.value))
+
+const brByMode = computed(() => {
+  const v = veh.value
+  if (!v?.Name) return {}
+
+  const name   = v.Name
+  const nation = v.Nation
+  const type   = v.Type
+
+  const result = {}
+  for (const entry of store.allVehicles) {
+    if (
+      entry.Name   === name   &&
+      entry.Nation === nation &&
+      entry.Type   === type   &&
+      entry.Mode   != null    &&
+      entry.BR     != null
+    ) {
+      if (!(entry.Mode in result)) {
+        result[entry.Mode] = fmtBR(entry.BR)
+      }
+    }
+  }
+  return result
+})
 
 function v(key) {
   const val = veh.value?.[key]
@@ -162,7 +209,42 @@ const classColor = computed(() => {
 <style scoped>
 .card-header { display: flex; align-items: center; padding: 12px 16px; gap: 8px; }
 .vehicle-name { font-size: 18px; font-weight: 700; color: #a7f3d0; letter-spacing: .06em; }
-.br-badge { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #94a3b8; white-space: nowrap; }
+
+.br-modes {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.br-pill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  padding: 2px 7px;
+  border: 1px solid #1e3a5f;
+  border-radius: 5px;
+  background: transparent;
+  transition: border-color .15s, background .15s;
+}
+.br-pill--active {
+  border-color: rgba(56, 189, 248, 0.45);
+  background: rgba(56, 189, 248, 0.08);
+}
+.br-pill__mode {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #475569;
+}
+.br-pill--active .br-pill__mode { color: #7dd3fc; }
+.br-pill__val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: #94a3b8;
+}
+.br-pill--active .br-pill__val { color: #38bdf8; }
+
 .card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
 .card-section { padding: 14px 16px; border-right: 1px solid #1e293b; border-bottom: 1px solid #1e293b; }
 .card-section:nth-child(even) { border-right: none; }
