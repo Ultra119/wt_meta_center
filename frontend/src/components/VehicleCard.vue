@@ -34,10 +34,7 @@
 
         <div class="info-band">
           <div class="img-pane">
-            <img v-if="vehicle.image_url" :src="vehicle.image_url" class="veh-img" :alt="displayName" />
-            <div v-else class="img-placeholder">
-              <v-icon size="36" style="opacity:.1;color:#a7f3d0">mdi-image-outline</v-icon>
-            </div>
+            <VehicleImage :name="vehicle.vdb_identifier" :type="vehicle.Type" aspect="2/1" fit="cover" />
           </div>
           <div class="meta-pane">
             <div class="meta-row">
@@ -176,6 +173,7 @@ import {
   vehicleDisplayName, fmtType, fmtNation, fmtBR, fmtSL,
   metaColor, farmColor, wrColor,
 } from '../composables/useVehicleFormatting.js'
+import VehicleImage from './VehicleImage.vue'
 
 const { t } = useI18n()
 const store  = useDataStore()
@@ -277,9 +275,6 @@ const classColor = computed(() => {
 .img-pane {
   border-right: 1px solid #1e293b;
   background: rgba(30, 58, 95, 0.12);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   min-height: 90px;
   overflow: hidden;
 }
