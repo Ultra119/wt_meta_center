@@ -242,57 +242,25 @@ def score(df: pd.DataFrame, settings: dict) -> pd.DataFrame:
 
     df["_sl_eff"]        = net_sl
     df["Net SL за игру"] = net_sl.round(0).astype(int)
-    df["_z_sl"]          = 0.0
 
     farm_type_groups = df["_farm_peer_group"].dropna().unique()
+    df["_farm_pct"] = 0.0
 
-    _global_sigma_sl: dict[tuple, float] = {}
     for mode in unique_modes:
         mask_mode = (df["Mode"] == mode) if mode is not None else pd.Series(True, index=df.index)
         for tg in farm_type_groups:
-            mask_tg  = (df["_farm_peer_group"] == tg) & mask_mode
-            g_sl     = df.loc[mask_tg, "_sl_eff"]
-            g_mu_sl  = g_sl.median()
-            g_mad_sl = (g_sl - g_mu_sl).abs().median()
-            g_sig_sl = g_mad_sl * 1.4826
-            _global_sigma_sl[(tg, mode)] = (
-                float(g_sig_sl) if (not pd.isna(g_sig_sl) and g_sig_sl > 1e-9) else 0.0
-            )
+            mask_tg = (df["_farm_peer_group"] == tg) & mask_mode
+            sl_vals = df.loc[mask_tg, "_sl_eff"]
+            if sl_vals.empty:
+                continue
+            df.loc[mask_tg, "_farm_pct"] = sl_vals.rank(method="average", pct=True) * 100.0
 
-    for mode in unique_modes:
-        mask_mode = (df["Mode"] == mode) if mode is not None else pd.Series(True, index=df.index)
-        for br in unique_brs:
-            for tg in farm_type_groups:
-                mask_peer = (
-                    (df["BR"] >= br - mm_window) &
-                    (df["BR"] <= br + mm_window) &
-                    (df["_farm_peer_group"] == tg) &
-                    mask_mode
-                )
-                mask_self = (df["BR"] == br) & (df["_farm_peer_group"] == tg) & mask_mode
-
-                peers_ext_sl = df.loc[mask_peer & ~mask_self, "_sl_eff"]
-                if peers_ext_sl.empty:
-                    peers_ext_sl = df.loc[mask_peer, "_sl_eff"]
-                if peers_ext_sl.empty:
-                    continue
-                mu_sl    = peers_ext_sl.median()
-                mad_sl   = (peers_ext_sl - mu_sl).abs().median()
-                sigma_sl = mad_sl * 1.4826
-                if pd.isna(sigma_sl) or sigma_sl < 1e-9:
-                    sigma_sl = _global_sigma_sl.get((tg, mode), 0.0)
-                if sigma_sl < 1e-9:
-                    continue
-                df.loc[mask_self, "_z_sl"] = (
-                    (df.loc[mask_self, "_sl_eff"] - mu_sl) / sigma_sl
-                ).clip(-z_clip, z_clip)
-
-    _farm_raw = 100.0 / (1.0 + np.exp(-sig_scale * df["_z_sl"]))
-    _farm_lo  = 100.0 / (1.0 + np.exp( sig_scale * z_clip))
-    _farm_hi  = 100.0 / (1.0 + np.exp(-sig_scale * z_clip))
-    df["FARM_SCORE"] = (
-        (_farm_raw - _farm_lo) / (_farm_hi - _farm_lo) * 100.0
-    ).clip(0.0, 100.0)
+    _fp    = df["_farm_pct"] / 100.0
+    _fp    = _fp.clip(1e-6, 1.0 - 1e-6)
+    _logit = np.log(_fp / (1.0 - _fp))
+    _scale = 0.6
+    _sig   = 1.0 / (1.0 + np.exp(-_scale * _logit))
+    df["FARM_SCORE"] = (_sig * 100.0).clip(0.0, 100.0)
 
     drop_cols = [
         c for c in df.columns
